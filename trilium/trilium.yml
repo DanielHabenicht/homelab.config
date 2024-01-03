@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  app:
+    image: zadam/trilium:0.62-latest
+    volumes:
+      - ./trilium-data:/home/node/trilium-data
+    restart: always
+    user: '1000:1000'
+    networks:
+      - default
+      - traefik_backbone
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.trilium.rule=Host(`trilium.home.aquiver.de`)"
+      - "traefik.http.routers.trilium.entrypoints=websecure"
+      - "traefik.http.routers.trilium.tls=true"
+      - "traefik.http.routers.trilium.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.trilium.service=trilium-service@docker"
+      - "traefik.http.services.trilium-service.loadbalancer.server.port=8080"
+
+networks:
+  default:
+    driver: bridge
+    internal: true
+  traefik_backbone:
+    external: true

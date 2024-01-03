@@ -1,0 +1,51 @@
+# Run Monica with fpm+nginx backend
+
+version: "3.9"
+
+services:
+  app:
+    image: monica
+    depends_on:
+      - db
+    ports:
+      - 8081:80
+    environment:
+      - APP_ENV=production
+      - APP_URL=https://monica.home.aquiver.de
+      - DB_HOST=db
+    env_file:
+      - .env
+    volumes:
+      - ./data:/var/www/html/storage
+    restart: always
+    user: '1000:1000'
+    networks:
+      - default
+      - traefik_backbone
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.monica.rule=Host(`monica.home.aquiver.de`)"
+      - "traefik.http.routers.monica.entrypoints=websecure"
+      - "traefik.http.routers.monica.tls=true"
+      - "traefik.http.routers.monica.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.monica.service=monica-service@docker"
+      - "traefik.http.services.monica-service.loadbalancer.server.port=80"
+  db:
+    image: mariadb:11
+    environment:
+      - MYSQL_DATABASE=monica
+    env_file:
+      - .env
+    volumes:
+      - ./mysql:/var/lib/mysql
+    restart: always
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
+    internal: true
+  traefik_backbone:
+    external: true

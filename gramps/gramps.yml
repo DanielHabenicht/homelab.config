@@ -1,0 +1,88 @@
+version: "3.7"
+
+services:
+  grampsweb:
+    image: ghcr.io/gramps-project/grampsweb:latest
+    restart: always
+    environment:
+      GRAMPSWEB_NEW_DB_BACKEND: sqlite
+      GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
+      GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+      GRAMPSWEB_BASE_URL: "https://gramps.home.aquiver.de"
+    depends_on:
+      - grampsweb_redis
+    volumes:
+      - gramps_users:/app/users  # persist user database
+      - gramps_index:/app/indexdir  # persist search index
+      - gramps_thumb_cache:/app/thumbnail_cache  # persist thumbnails
+      - gramps_cache:/app/cache  # persist export and report caches
+      - gramps_secret:/app/secret  # persist flask secret
+      - gramps_db:/root/.gramps/grampsdb  # persist Gramps database
+      - gramps_media:/app/media  # persist media files
+      - gramps_tmp:/tmp
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.gramps.rule=Host(`gramps.home.aquiver.de`)"
+      - "traefik.http.routers.gramps.entrypoints=websecure"
+      - "traefik.http.routers.gramps.tls=true"
+      - "traefik.http.routers.gramps.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.gramps.service=gramps-service@docker"
+      - "traefik.http.services.gramps-service.loadbalancer.server.port=5000"
+    networks:
+      - no-internet
+      - traefik_backbone
+
+  grampsweb_celery:
+    image: ghcr.io/gramps-project/grampsweb:latest
+    container_name: grampsweb_celery
+    restart: always
+    depends_on:
+      - grampsweb_redis
+    command: celery -A gramps_webapi.celery worker --loglevel=INFO
+    environment:
+      GRAMPSWEB_NEW_DB_BACKEND: sqlite
+      GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
+      GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
+      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
+      GRAMPSWEB_BASE_URL: "https://gramps.home.aquiver.de"
+    volumes:
+      - gramps_users:/app/users  # persist user database
+      - gramps_index:/app/indexdir  # persist search index
+      - gramps_thumb_cache:/app/thumbnail_cache  # persist thumbnails
+      - gramps_cache:/app/cache  # persist export and report caches
+      - gramps_secret:/app/secret  # persist flask secret
+      - gramps_db:/root/.gramps/grampsdb  # persist Gramps database
+      - gramps_media:/app/media  # persist media files
+      - gramps_tmp:/tmp
+    networks:
+      - no-internet
+      - traefik_backbone
+
+  grampsweb_redis:
+    image: redis:alpine
+    container_name: grampsweb_redis
+    restart: always
+    networks:
+      - no-internet
+      - traefik_backbone
+
+volumes:
+  gramps_users:
+  gramps_index:
+  gramps_thumb_cache:
+  gramps_cache:
+  gramps_secret:
+  gramps_db:
+  gramps_media:
+  gramps_tmp:
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  traefik_backbone:
+    external: true
