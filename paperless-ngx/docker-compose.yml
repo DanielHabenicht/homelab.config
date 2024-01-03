@@ -49,8 +49,6 @@ services:
       POSTGRES_DB: paperless
       POSTGRES_USER: paperless
       POSTGRES_PASSWORD: paperless
-    env_file:
-      - .env
     networks:
       - no-internet
 
@@ -62,6 +60,8 @@ services:
       - broker
       - gotenberg
       - tika
+#    ports:
+#      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-fs", "-S", "--max-time", "2", "http://localhost:8000"]
       interval: 30s
@@ -72,7 +72,6 @@ services:
       - media:/usr/src/paperless/media
       - ./export:/usr/src/paperless/export
       - ./consume:/usr/src/paperless/consume
-    env_file: docker-compose.env
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
@@ -80,6 +79,9 @@ services:
       PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
       PAPERLESS_TIKA_ENDPOINT: http://tika:9998
       PAPERLESS_URL: https://paperless.home.aquiver.de
+      PAPERLESS_CONSUMER_ENABLE_BARCODES: true # enable search for barcodes
+      PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: true # enable setting ASN by ASN barcodes
+      PAPERLESS_CONSUMER_BARCODE_SCANNER: ZXING # switch from pyzbar to zxing for better recognitio
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
@@ -115,9 +117,8 @@ services:
       - no-internet
 
   pdfedit:
-    image: ghcr.io/danielhabenicht/danielhabenicht/fork.pdf-web-edit:v0.9.4
-    ports:
-      - 8080:8080
+    image: ghcr.io/danielhabenicht/danielhabenicht/fork.pdf-web-edit:v0.9.6
+    restart: unless-stopped
     volumes:
       - ./pdf-edit-config/:/config
       - ./pdf-edit-inbox/:/inbox
@@ -127,12 +128,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.pdfedit.rule=Host(`import.home.aquiver.de`)"
       - "traefik.http.routers.pdfedit.entrypoints=websecure"
+      - "traefik.http.routers.pdfedit.rule=Host(`import.home.aquiver.de`)"
       - "traefik.http.routers.pdfedit.tls=true"
       - "traefik.http.routers.pdfedit.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.pdfedit.service=pdfedit-service@docker"
       - "traefik.http.services.pdfedit-service.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.limit.buffering.memRequestBodyBytes=4000000"
     networks:
       - no-internet
       - traefik_backbone
@@ -151,4 +153,5 @@ networks:
   internet:
     driver: bridge
   traefik_backbone:
+    name: traefik_backbone
     external: true
