@@ -6,7 +6,7 @@ services:
     volumes:
       - ./trilium-data:/home/node/trilium-data
     restart: always
-    user: '1000:1000'
+#    user: '1000:1000'
     networks:
       - default
       - traefik_backbone
