@@ -10,3 +10,10 @@ Hopefully more secure by not allowing the services to access the internet.
 ## Services
 
 - [Traefik](https://traefik.io/)
+
+
+## Usage
+
+```
+git clone https://<USERNAME>:<SECRET_TOKEN>@github.com/DanielHabenicht/homelab.config.git
+```
