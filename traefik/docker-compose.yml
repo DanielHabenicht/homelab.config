@@ -3,30 +3,19 @@ services:
   traefik:
     image: "traefik:v2.10"
     restart: unless-stopped
-    command:
-      - "--log.level=DEBUG"
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
-      - "--entrypoints.websecure.address=:443"
-      - --certificatesresolvers.wildcard-godaddy.acme.dnschallenge=true
-      - --certificatesResolvers.wildcard-godaddy.acme.dnsChallenge.provider=godaddy
-      - --certificatesResolvers.wildcard-godaddy.acme.dnsChallenge.delayBeforeCheck=0
-      - --certificatesresolvers.wildcard-godaddy.acme.email=daniel-habenich@outlook.de
-#      - --certificatesresolvers.wildcard-godaddy.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+    security_opt:
+      - no-new-privileges:true
     env_file:
       - .env
     ports:
       - "80:80"
       - "443:443"
-      - "8001:8080"
+      # - "8001:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "./acme.json:/acme.json"
-#      - ./traefik:/traefik
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - backbone
       - internet
@@ -38,12 +27,6 @@ services:
       traefik.http.routers.traefik.service: api@internal
       traefik.http.routers.traefik.entrypoints: websecure
       traefik.http.routers.traefik.tls.certresolver: tlsleresolver
-
-      traefik.http.routers.foo.rule: Host(`dns.home.aquiver.de`)
-      traefik.http.routers.foo.service: foo
-      traefik.http.routers.foo.entrypoints: websecure
-      traefik.http.routers.foo.tls.certresolver: wildcard-godaddy
-      traefik.http.services.foo.loadbalancer.server.url: http://192.168.178.174:5380
 
 networks:
   internet:

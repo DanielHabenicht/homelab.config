@@ -1,0 +1,15 @@
+# DNS
+http:
+  routers:
+    dns:
+      # By default, routers listen to every entry points
+      rule: "Host(`dns.home.aquiver.de`)"
+      service: "dns"
+      tls:
+        certResolver: wildcard-godaddy
+
+  services:
+    dns:
+      loadBalancer:
+        servers:
+        - url: "http://192.168.178.174:5380/"
