@@ -3,7 +3,7 @@ version: "3.7"
 services:
   grampsweb:
     image: ghcr.io/gramps-project/grampsweb:latest
-    restart: always
+    restart: unless-stopped
     environment:
       GRAMPSWEB_NEW_DB_BACKEND: sqlite
       GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
@@ -38,7 +38,7 @@ services:
   grampsweb_celery:
     image: ghcr.io/gramps-project/grampsweb:latest
     container_name: grampsweb_celery
-    restart: always
+    restart: unless-stopped
     depends_on:
       - grampsweb_redis
     command: celery -A gramps_webapi.celery worker --loglevel=INFO

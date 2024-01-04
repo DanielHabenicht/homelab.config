@@ -17,7 +17,7 @@ services:
       - .env
     volumes:
       - ./data:/var/www/html/storage
-    restart: always
+    restart: unless-stopped
 #    user: '1000:1000'
     networks:
       - default
@@ -40,7 +40,7 @@ services:
       - .env
     volumes:
       - ./mysql:/var/lib/mysql
-    restart: always
+    restart: unless-stopped
     networks:
       - default
 

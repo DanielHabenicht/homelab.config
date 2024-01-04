@@ -5,7 +5,7 @@ services:
     image: zadam/trilium:0.62-latest
     volumes:
       - ./trilium-data:/home/node/trilium-data
-    restart: always
+    restart: unless-stopped
 #    user: '1000:1000'
     networks:
       - default
