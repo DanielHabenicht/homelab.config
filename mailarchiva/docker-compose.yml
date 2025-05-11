@@ -1,0 +1,46 @@
+services:
+  emailproxy:
+    build:
+      context: ./imap-oauth-proxy
+    container_name: emailproxy
+    volumes:
+      - ./emailproxy.config:/config/emailproxy.config
+    environment:
+      LOGFILE: false
+      DEBUG: false
+      CACHE_STORE: /config/credstore.config
+    networks:
+      - internet
+
+  mailarchiva:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        MAILARCHIVA_VERSION: 9.0.36
+      # dockerfile: Dockerfile8 # <- enable to (keep) using version 8 of Mailarchiva
+    image: mailarchiva:latest
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8081:80"
+    #tmpfs:
+    #  - /tmp/mailarchiva
+    #  - /tmp/hsperfdata_root
+    volumes:
+      - ./data/appdata:/var/opt/mailarchiva
+      - ./data/storage:/var/opt/vol
+      - ./data/logs:/var/log/mailarchiva
+      - ./data/etc:/etc/opt/mailarchiva
+    networks:
+      - internet
+      - traefik_backbone
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
