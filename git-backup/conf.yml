@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cooperspencer/gickup/refs/heads/main/gickup_spec.json
+
+source:
+  github:
+    - token_file: /gickup/token.txt
+#      exclude: # this excludes the repos "foo" and "bar"
+#        - foo
+#        - bar
+#      include: # this includes the repo "foobar"
+#        - foobar
+#      excludeorgs: # this excludes repos from the organizations "foo" and "bar"
+#        - foo
+#        - bar
+#      includeorgs: # this includes repos from the organizations "foo1" and "bar1"
+#        - foo1
+#        - bar1
+      wiki: true # includes wiki too
+      issues: true # back up issues, works only locally
+      starred: true # includes the user's starred repositories too
+      gists: true # clone gists too
+destination:
+  local:
+    # Export this path from Docker with a volume to make it accessible and more permanent.
+    - path: /mnt/backup/
+      structured: true # checks repos out like hostersite/user|organization/repo
+#      zip: true # zips the repository after cloned and removes the repository afterwards
+      keep: 5 # only keeps x backups
+#      bare: true # clone the repositories as bare
+      lfs: true # clone lfs repos, !! ATTENTION !! git and git-lfs must be installed on the system!
+# cron: 0 22 * * * # optional - when cron is not provided, the program runs once and exits.
+# Otherwise, it runs according to the cron schedule.
+# See timezone commentary in docker-compose.yml for making sure this container runs
+# in the timezone you want.
+# For more information on crontab or testing: https://crontab.guru/
+
+log: # optional
+  timeformat: 2006-01-02 15:04:05 # you can use a custom time format, use https://yourbasic.org/golang/format-parse-string-time-date-example/ to check how date formats work in go
+                                  # or set it as environment variable GICKUP_TIME_FORMAT
+  file-logging: # optional
+    dir: log # directory to log into
+    file: /gickup/gickup.log # file to log into
+    maxage: 7 # keep logs for 7 days
+
+# metrics:
+#  heartbeat: # optional - upon successful backup, makes a GET http request to one or more URLs. This is useful for use with monitoring services such as healthchecks.io or deadmanssnitch.com
+#    urls:
+#      - http(s)://url-to-make-request-to
+#      - http(s)://another-url-to-make-request-to
+#  push:
+#    ntfy:
+#    - url: http(s)://url-to-ntfy/your-topic
+#      token: your-token 
+#      user: your-user
+#      password: your-password
+#    gotify:
+#    - url: http(s)://url-to-gotify
+#      token: your-token

@@ -1,0 +1,14 @@
+version: "3"
+services:
+  runner:
+    # build: . # If you want to Build the Image locally (You need the complete Repo on your PC)
+    image: buddyspencer/gickup:ubuntu-latest
+    volumes:
+      - ./conf.yml:/gickup/conf.yml
+      - ./token.txt:/gickup/token.txt
+      - ./gickup.log:/gickup/gickup.log
+      - ./backup:/mnt/backup
+    command: ["/gickup/conf.yml", "--debug"] # Changes the path of the internal bound config
+    # Uncomment these 2 lines and set timezone appropriately to specify cron in local time instead of UTC.
+    # environment:
+    #   - TZ=America/Los_Angeles
