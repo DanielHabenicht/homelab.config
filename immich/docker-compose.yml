@@ -14,14 +14,14 @@ services:
   immich-server:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
-    command: [ "start.sh", "immich" ]
     volumes:
       - ${UPLOAD_LOCATION}:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
+      - ./opa:/mnt/opa:ro
     env_file:
       - .env
     ports:
-      - 2283:3001
+      - 2283:2283
     depends_on:
       - redis
       - database
@@ -36,29 +36,10 @@ services:
       - "traefik.http.routers.immich.tls.domains[0].main=aquiver.de"
       - "traefik.http.routers.immich.tls.domains[0].sans=*.home.aquiver.de"
       - "traefik.http.routers.immich.service=immich-service@docker"
-      - "traefik.http.services.immich-service.loadbalancer.server.port=3001"
+      - "traefik.http.services.immich-service.loadbalancer.server.port=2283"
     networks:
       - no-internet
       - traefik_backbone
-
-  immich-microservices:
-    container_name: immich_microservices
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
-    # extends:
-    #   file: hwaccel.yml
-    #   service: hwaccel
-    command: [ "start.sh", "microservices" ]
-    volumes:
-      - ${UPLOAD_LOCATION}:/usr/src/app/upload
-      - /etc/localtime:/etc/localtime:ro
-    env_file:
-      - .env
-    depends_on:
-      - redis
-      - database
-    restart: unless-stopped
-    networks:
-      - no-internet
       - internet
 
   immich-machine-learning:
@@ -82,7 +63,7 @@ services:
 
   database:
     container_name: immich_postgres
-    image: tensorchord/pgvecto-rs:pg14-v0.1.11@sha256:0335a1a22f8c5dd1b697f14f079934f5152eaaa216c09b61e293be285491f8ee
+    image: tensorchord/pgvecto-rs:pg14-v0.2.0@sha256:90724186f0a3517cf6914295b5ab410db9ce23190a2d9d0b9dd6463e3fa298f0
     env_file:
       - .env
     environment:
@@ -91,6 +72,8 @@ services:
       POSTGRES_DB: ${DB_DATABASE_NAME}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      #- ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+      - ${DB_DATA_LOCATION}:/mnt/postgres
     restart: unless-stopped
     networks:
       - no-internet
