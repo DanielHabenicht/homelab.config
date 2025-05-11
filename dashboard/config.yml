@@ -1,0 +1,98 @@
+pageInfo:
+  title: Home Lab
+sections:
+  - name: Documents
+    icon: far fa-folder-open
+    items:
+      - title: Import
+        description: ''
+        icon: far fa-file-import
+        url: https://import.home.aquiver.de/inbox
+        target: newtab
+        statusCheck: true
+        id: 0_946_import
+      - title: Paperless
+        description: View open issues, or raise a new one
+        icon: fas fa-file
+        url: https://paperless.home.aquiver.de/
+        statusCheck: true
+        id: 1_946_paperless
+    displayData:
+      sortBy: default
+      rows: 1
+      cols: 1
+      collapsed: false
+      hideForGuests: false
+  - name: Management
+    items:
+      - title: DNS
+        icon: favicon
+        url: https://dns.home.aquiver.de/
+        statusCheck: true
+        id: 0_1021_dns
+      - title: Traefik
+        icon: favicon
+        url: https://traefik.home.aquiver.de/
+        statusCheck: true
+        id: 1_1021_traefik
+    displayData:
+      sortBy: default
+      rows: 1
+      cols: 1
+      collapsed: false
+      hideForGuests: false
+  - name: Other
+    displayData:
+      sortBy: default
+      rows: 1
+      cols: 1
+      collapsed: false
+      hideForGuests: false
+    items:
+      - title: Gramps
+        icon: favicon
+        url: https://gramps.home.aquiver.de/
+        statusCheck: true
+        id: 0_514_gramps
+      - title: Recipes
+        icon: favicon
+        url: https://recipes.home.aquiver.de/
+        statusCheck: true
+        id: 1_514_recipes
+      - title: Monica
+        icon: favicon
+        url: https://monica.home.aquiver.de
+        statusCheck: true
+        id: 2_514_monica
+      - title: Notes
+        icon: favicon
+        url: https://trilium.home.aquiver.de
+        statusCheck: true
+        id: 3_514_notes
+      - title: Photos
+        icon: favicon
+        url: https://photos.home.aquiver.de
+        statusCheck: true
+        id: 4_514_photos
+      - title: Home Assistant
+        icon: favicon
+        url: https://hass.aquiver.de/
+        id: 5_514_homeassistant
+  - name: Hosting/Platform
+    displayData:
+      sortBy: default
+      rows: 1
+      cols: 1
+      collapsed: false
+      hideForGuests: false
+    items:
+      - title: Proxmox
+        url: https://192.168.178.147:8006/
+        id: 0_1616_proxmox
+      - title: TrueNAS
+        url: http://192.168.178.152/
+        id: 1_1616_truenas
+appConfig:
+  layout: auto
+  iconSize: medium
+  theme: minimal-dark
