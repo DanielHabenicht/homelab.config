@@ -31,6 +31,6 @@ certificatesResolvers:
     acme:
       email: "daniel-habenich@outlook.de"
       dnsChallenge:
-        provider: godaddy
+        provider: cloudflare
         delayBeforeCheck: 0
 
