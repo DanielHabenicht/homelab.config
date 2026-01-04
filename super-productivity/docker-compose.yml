@@ -1,0 +1,63 @@
+services:
+  # Super Productivity app
+  app:
+    image: johannesjo/super-productivity:latest
+    environment:
+      # Pre-configured defaults for easier setup
+      WEBDAV_BASE_URL: https://webdav.home.aquiver.de/
+      WEBDAV_USERNAME: admin
+      WEBDAV_SYNC_FOLDER_PATH: "/super-productivity"
+      SYNC_INTERVAL: 15
+      IS_COMPRESSION_ENABLED: true
+      IS_ENCRYPTION_ENABLED: false
+    networks:
+      - no-internet
+      - traefik_backbone
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.todo.rule=Host(`todo.home.aquiver.de`)"
+      - "traefik.http.routers.todo.entrypoints=websecure"
+      - "traefik.http.routers.todo.tls=true"
+      - "traefik.http.routers.todo.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.todo.tls.domains[0].main=aquiver.de"
+      - "traefik.http.routers.todo.tls.domains[0].sans=*.home.aquiver.de"
+      - "traefik.http.routers.todo.service=super-productivity-service@docker"
+      - "traefik.http.services.super-productivity-service.loadbalancer.server.port=80"
+
+  # WebDAV sync server
+  webdav:
+    image: hacdias/webdav:latest
+    volumes:
+      - ./webdav.yaml:/config.yml
+      - ./webdav_data:/data
+#    healthcheck:
+#      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:2345/']
+#      interval: 10s
+#      timeout: 5s
+#      retries: 3
+#      start_period: 10s
+    networks:
+      - no-internet
+      - traefik_backbone
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.webdav.rule=Host(`webdav.home.aquiver.de`)"
+      - "traefik.http.routers.webdav.entrypoints=websecure"
+      - "traefik.http.routers.webdav.tls=true"
+      - "traefik.http.routers.webdav.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.webdav.tls.domains[0].main=aquiver.de"
+      - "traefik.http.routers.webdav.tls.domains[0].sans=*.home.aquiver.de"
+      - "traefik.http.routers.webdav.service=webdav-service@docker"
+      - "traefik.http.services.webdav-service.loadbalancer.server.port=2345"
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
