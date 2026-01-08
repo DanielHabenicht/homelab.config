@@ -13,6 +13,7 @@ services:
     networks:
       - no-internet
       - traefik_backbone
+    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
@@ -28,6 +29,7 @@ services:
   # WebDAV sync server
   webdav:
     image: hacdias/webdav:latest
+    restart: unless-stopped
     volumes:
       - ./webdav.yaml:/config.yml
       - ./webdav_data:/data
