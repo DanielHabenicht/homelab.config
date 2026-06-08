@@ -25,6 +25,15 @@ entryPoints:
           scheme: https
   websecure:
     address: ":443"
+    asDefault: true
+    http:
+      tls:
+        domains:
+          - main: aquiver.de
+            sans:
+              - "*.home.aquiver.de"
+        certResolver: wildcard-godaddy
+
 
 certificatesResolvers:
   wildcard-godaddy:

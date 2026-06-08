@@ -19,6 +19,8 @@ services:
     networks:
       - backbone
       - internet
+    # To make authentication for non internet containers work
+    hostname: auth.home.aquiver.de
     labels:
       traefik.enable: true
 

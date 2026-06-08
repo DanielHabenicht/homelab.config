@@ -1,11 +1,16 @@
 services:
   actual_server:
-    image: docker.io/actualbudget/actual-server:25.12.0
+    image: docker.io/actualbudget/actual-server:26.4.0
 #    ports:
       # This line makes Actual available at port 5006 of the device you run the server on,
       # i.e. http://localhost:5006. You can change the first number to change the port, if you want.
       # - '5006:5006'
-#    environment:
+    environment:
+      ACTUAL_OPENID_DISCOVERY_URL: "https://auth.home.aquiver.de/.well-known/openid-configuration"
+      ACTUAL_OPENID_CLIENT_ID: "27f29969-89ff-4ed8-9d88-9380defc0646"
+      ACTUAL_OPENID_CLIENT_SECRET: "K41BUIuWUSmDBRtHTYQgwsGhbxZVI4K4"
+      ACTUAL_OPENID_SERVER_HOSTNAME: "https://finance.home.aquiver.de/"
+      ACTUAL_OPENID_ENFORCE: true
       # Uncomment any of the lines below to set configuration options.
       # - ACTUAL_HTTPS_KEY=/data/selfhost.key
       # - ACTUAL_HTTPS_CERT=/data/selfhost.crt
@@ -19,11 +24,12 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.actual.rule=Host(`finance.home.aquiver.de`)"
-      - "traefik.http.routers.actual.entrypoints=websecure"
-      - "traefik.http.routers.actual.tls=true"
-      - "traefik.http.routers.actual.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.actual.service=actual-service@docker"
       - "traefik.http.services.actual-service.loadbalancer.server.port=5006"
+      - "homepage.group=Applications"
+      - "homepage.name=Actual"
+      - "homepage.icon=actual-budget"
+      - "homepage.href=https://finance.home.aquiver.de/"
     volumes:
       # Change './actual-data' below to the path to the folder you want Actual to store its data in on your server.
       # '/data' is the path Actual will look for its files in by default, so leave that as-is.

@@ -82,17 +82,20 @@ services:
       PAPERLESS_CONSUMER_ENABLE_BARCODES: true # enable search for barcodes
       PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: true # enable setting ASN by ASN barcodes
       PAPERLESS_CONSUMER_BARCODE_SCANNER: ZXING # switch from pyzbar to zxing for better recognitio
+      PAPERLESS_APPS: "allauth.socialaccount.providers.openid_connect"
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "3d2ce895-5a63-45be-b371-04b9f69d70c5","secret": "2qSQV3H0r8oSU3GoTsyYOm05cIFV0nGH","settings": { "server_url": "https://auth.home.aquiver.de/.well-known/openid-configuration"}}]}}'
+      PAPERLESS_DISABLE_REGULAR_LOGIN: true
+      PAPERLESS_REDIRECT_LOGIN_TO_SSO: true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.paperless.rule=Host(`paperless.home.aquiver.de`)"
-      - "traefik.http.routers.paperless.entrypoints=websecure"
-      - "traefik.http.routers.paperless.tls=true"
-      - "traefik.http.routers.paperless.tls.certresolver=wildcard-godaddy"
-      - "traefik.http.routers.paperless.tls.domains[0].main=aquiver.de"
-      - "traefik.http.routers.paperless.tls.domains[0].sans=*.home.aquiver.de"
       - "traefik.http.routers.paperless.service=paperless-service@docker"
       - "traefik.http.services.paperless-service.loadbalancer.server.port=8000"
+      - "homepage.group=Media"
+      - "homepage.name=Paperless"
+      - "homepage.icon=paperless-ngx"
+      - "homepage.href=https://paperless.home.aquiver.de/"
     networks:
       - no-internet
       - traefik_backbone

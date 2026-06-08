@@ -1,0 +1,40 @@
+services:
+  pocket-id:
+    image: ghcr.io/pocket-id/pocket-id:v2
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      VERSION_CHECK_DISABLED: true
+      ANALYTICS_DISABLED: true
+    volumes:
+      - "./data:/app/data"
+    # Optional healthcheck
+    healthcheck:
+      test: [ "CMD", "/app/pocket-id", "healthcheck" ]
+      interval: 1m30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+    networks:
+      - traefik_backbone
+      - no-internet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.pocketid.rule=Host(`auth.home.aquiver.de`)"
+      - "traefik.http.routers.pocketid.service=pocketid-service@docker"
+      - "traefik.http.services.pocketid-service.loadbalancer.server.port=1411"
+      - "homepage.group=Authentication"
+      - "homepage.name=Pocket ID"
+      - "homepage.icon=pocket-id"
+      - "homepage.href=https://auth.home.aquiver.de/"
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true

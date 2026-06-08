@@ -30,13 +30,12 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.immich.rule=Host(`photos.home.aquiver.de`)"
-      - "traefik.http.routers.immich.entrypoints=websecure"
-      - "traefik.http.routers.immich.tls=true"
-      - "traefik.http.routers.immich.tls.certresolver=wildcard-godaddy"
-      - "traefik.http.routers.immich.tls.domains[0].main=aquiver.de"
-      - "traefik.http.routers.immich.tls.domains[0].sans=*.home.aquiver.de"
       - "traefik.http.routers.immich.service=immich-service@docker"
       - "traefik.http.services.immich-service.loadbalancer.server.port=2283"
+      - "homepage.group=Media"
+      - "homepage.name=Immich"
+      - "homepage.icon=immich"
+      - "homepage.href=https://photos.home.aquiver.de/"
     networks:
       - no-internet
       - traefik_backbone
