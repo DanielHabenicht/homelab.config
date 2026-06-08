@@ -1,0 +1,46 @@
+services:
+  dockerproxy-read:
+    image: ghcr.io/tecnativa/docker-socket-proxy:latest
+    environment:
+      - CONTAINERS=1 # Allow access to viewing containers
+      - SERVICES=1 # Allow access to viewing services (necessary when using Docker Swarm)
+      - TASKS=1 # Allow access to viewing tasks (necessary when using Docker Swarm)
+      - POST=0 # Disallow any POST operations (effectively read-only)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Mounted as read-only
+    restart: unless-stopped
+    networks:
+      - no-internet
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: home.aquiver.de # required, may need port. See gethomepage.dev/installation/#homepage_allowed_hosts
+      PUID: 1000 # optional, your user id
+      PGID: 1000 # optional, your group id
+    volumes:
+      - ./config:/app/config # Make sure your local config directory exists
+    restart: unless-stopped
+    networks:
+      - traefik_backbone
+      - no-internet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.homepage.rule=Host(`home.aquiver.de`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls=true"
+      - "traefik.http.routers.homepage.tls.certresolver=wildcard-godaddy"
+      - "traefik.http.routers.homepage.service=homepage-service@docker"
+      - "traefik.http.services.homepage-service.loadbalancer.server.port=3000"
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
