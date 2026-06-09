@@ -30,28 +30,23 @@ services:
     image: vabene1111/recipes
     env_file:
       - ./.env
+    environment:
+      SOCIAL_PROVIDERS: "allauth.socialaccount.providers.openid_connect"
+      SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "10c2bd8d-d2e4-4e5d-90ab-f02e4144b91f","secret": "yOaAsuzQLGO2IowzUteSStt3hKyLxrny","settings": { "server_url": "https://auth.home.aquiver.de/.well-known/openid-configuration"}}]}}'
+      SOCIALACCOUNT_LOGIN_ON_GET: 1
+      ALLOWED_HOSTS: recipes.home.aquiver.de
+      HIDE_LOGIN_FORM: 1
+      SOCIALACCOUNT_ONLY: 1
     volumes:
       - staticfiles:/opt/recipes/staticfiles
-      # Do not make this a bind mount, see https://docs.tandoor.dev/install/docker/#volumes-vs-bind-mounts
-      - nginx_config:/opt/recipes/nginx/conf.d/errorpages
       - ./mediafiles:/opt/recipes/mediafiles
     # depends_on:
     #   - db_recipes
     networks:
       - no-internet
       - internet
+      - traefik_backbone
 
-  nginx_recipes:
-    image: nginx:mainline-alpine
-    restart: always
-    env_file:
-      - ./.env
-    volumes:
-      # Do not make this a bind mount, see https://docs.tandoor.dev/install/docker/#volumes-vs-bind-mounts
-      - nginx_config:/etc/nginx/conf.d/errorpages:ro
-      - ./Recipes.conf:/etc/nginx/conf.d/Recipes.conf
-      - staticfiles:/static:ro
-      - ./mediafiles:/media:ro
     labels: # traefik example labels
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
@@ -61,11 +56,6 @@ services:
       - "traefik.http.routers.recipes.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.recipes.service=recipes-service@docker"
       - "traefik.http.services.recipes-service.loadbalancer.server.port=80"
-    depends_on:
-      - web_recipes
-    networks:
-      - no-internet
-      - traefik_backbone
 
 networks:
   no-internet:
@@ -79,5 +69,4 @@ networks:
 
 
 volumes:
-  nginx_config:
   staticfiles:

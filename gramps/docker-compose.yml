@@ -1,7 +1,7 @@
 version: "3.7"
 
 services:
-  grampsweb:
+  grampsweb: &grampsweb
     image: ghcr.io/gramps-project/grampsweb:latest
     restart: unless-stopped
     environment:
@@ -11,6 +11,13 @@ services:
       GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
       GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
       GRAMPSWEB_BASE_URL: "https://gramps.home.aquiver.de"
+      GRAMPSWEB_OIDC_ENABLED: true
+      GRAMPSWEB_OIDC_ISSUER: "https://auth.home.aquiver.de"
+      GRAMPSWEB_OIDC_CLIENT_ID: "7098db8d-1485-4000-a9ec-c4036547a792"
+      GRAMPSWEB_OIDC_CLIENT_SECRET: "g3LnNzFPWcJns34bxl1HbGAfDz4cgTig"
+      GRAMPSWEB_OIDC_NAME: "Pocket ID"
+      GRAMPSWEB_OIDC_AUTO_REDIRECT: true
+      GRAMPSWEB_OIDC_DISABLE_LOCAL_AUTH: true
     depends_on:
       - grampsweb_redis
     volumes:
@@ -36,31 +43,14 @@ services:
       - traefik_backbone
 
   grampsweb_celery:
-    image: ghcr.io/gramps-project/grampsweb:latest
+    <<: *grampsweb  # YAML merge key copying the entire grampsweb service config
+    ports: []
     container_name: grampsweb_celery
-    restart: unless-stopped
     depends_on:
+      - grampsweb
       - grampsweb_redis
-    command: celery -A gramps_webapi.celery worker --loglevel=INFO
-    environment:
-      GRAMPSWEB_NEW_DB_BACKEND: sqlite
-      GRAMPSWEB_TREE: "Gramps Web"  # will create a new tree if not exists
-      GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
-      GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
-      GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
-      GRAMPSWEB_BASE_URL: "https://gramps.home.aquiver.de"
-    volumes:
-      - gramps_users:/app/users  # persist user database
-      - gramps_index:/app/indexdir  # persist search index
-      - gramps_thumb_cache:/app/thumbnail_cache  # persist thumbnails
-      - gramps_cache:/app/cache  # persist export and report caches
-      - gramps_secret:/app/secret  # persist flask secret
-      - gramps_db:/root/.gramps/grampsdb  # persist Gramps database
-      - gramps_media:/app/media  # persist media files
-      - gramps_tmp:/tmp
-    networks:
-      - no-internet
-      - traefik_backbone
+    command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
+    labels: []
 
   grampsweb_redis:
     image: redis:alpine
