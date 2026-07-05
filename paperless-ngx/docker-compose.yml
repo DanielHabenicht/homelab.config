@@ -50,13 +50,13 @@ services:
       PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: true # enable setting ASN by ASN barcodes
       PAPERLESS_CONSUMER_BARCODE_SCANNER: ZXING # switch from pyzbar to zxing for better recognitio
       PAPERLESS_APPS: "allauth.socialaccount.providers.openid_connect"
-      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "3d2ce895-5a63-45be-b371-04b9f69d70c5","secret": "2qSQV3H0r8oSU3GoTsyYOm05cIFV0nGH","settings": { "server_url": "https://auth.${SUBDOMAIN:-home}.aquiver.de/.well-known/openid-configuration"}}]}}'
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "${OIDC_CLIENT_ID}","secret": "${OIDC_CLIENT_SECRET}","settings": { "server_url": "https://auth.${SUBDOMAIN:-home}.aquiver.de/.well-known/openid-configuration"}}]}}'
       PAPERLESS_DISABLE_REGULAR_LOGIN: true
       PAPERLESS_REDIRECT_LOGIN_TO_SSO: true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.pocketid.rule=Host(`documents.${SUBDOMAIN:-home}.aquiver.de`)"
+      - "traefik.http.routers.paperless.rule=Host(`documents.${SUBDOMAIN:-home}.aquiver.de`)"
       - "traefik.http.routers.paperless.service=paperless-service@docker"
       - "traefik.http.services.paperless-service.loadbalancer.server.port=8000"
       - "homepage.group=Dokumentenverwaltung"
