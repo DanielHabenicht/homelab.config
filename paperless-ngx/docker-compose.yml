@@ -45,24 +45,24 @@ services:
       PAPERLESS_TIKA_ENABLED: 1
       PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
       PAPERLESS_TIKA_ENDPOINT: http://tika:9998
-      PAPERLESS_URL: https://paperless.home.aquiver.de
+      PAPERLESS_URL: https://documents.${SUBDOMAIN:-home}.aquiver.de
       PAPERLESS_CONSUMER_ENABLE_BARCODES: true # enable search for barcodes
       PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: true # enable setting ASN by ASN barcodes
       PAPERLESS_CONSUMER_BARCODE_SCANNER: ZXING # switch from pyzbar to zxing for better recognitio
       PAPERLESS_APPS: "allauth.socialaccount.providers.openid_connect"
-      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "3d2ce895-5a63-45be-b371-04b9f69d70c5","secret": "2qSQV3H0r8oSU3GoTsyYOm05cIFV0nGH","settings": { "server_url": "https://auth.home.aquiver.de/.well-known/openid-configuration"}}]}}'
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "3d2ce895-5a63-45be-b371-04b9f69d70c5","secret": "2qSQV3H0r8oSU3GoTsyYOm05cIFV0nGH","settings": { "server_url": "https://auth.${SUBDOMAIN:-home}.aquiver.de/.well-known/openid-configuration"}}]}}'
       PAPERLESS_DISABLE_REGULAR_LOGIN: true
       PAPERLESS_REDIRECT_LOGIN_TO_SSO: true
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.paperless.rule=Host(`paperless.home.aquiver.de`)"
+      - "traefik.http.routers.pocketid.rule=Host(`documents.${SUBDOMAIN:-home}.aquiver.de`)"
       - "traefik.http.routers.paperless.service=paperless-service@docker"
       - "traefik.http.services.paperless-service.loadbalancer.server.port=8000"
-      - "homepage.group=Media"
-      - "homepage.name=Paperless"
-      - "homepage.icon=paperless-ngx"
-      - "homepage.href=https://paperless.home.aquiver.de/"
+      - "homepage.group=Dokumentenverwaltung"
+      - "homepage.name=Paperless NGX"
+      - "homepage.icon=sh-paperless-ngx"
+      - "homepage.href=https://documents.${SUBDOMAIN:-home}.aquiver.de"
     networks:
       - no-internet
       - traefik_backbone
@@ -99,7 +99,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.pdfedit.entrypoints=websecure"
-      - "traefik.http.routers.pdfedit.rule=Host(`import.home.aquiver.de`)"
+      - "traefik.http.routers.pdfedit.rule=Host(`import.${SUBDOMAIN:-home}.aquiver.de`)"
       - "traefik.http.routers.pdfedit.tls=true"
       - "traefik.http.routers.pdfedit.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.pdfedit.service=pdfedit-service@docker"

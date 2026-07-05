@@ -24,13 +24,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.trilium.rule=Host(`trilium.home.aquiver.de`)"
+      - "traefik.http.routers.trilium.rule=Host(`trilium.${SUBDOMAIN:-home}.aquiver.de`)"
       - "traefik.http.routers.trilium.service=trilium-service@docker"
       - "traefik.http.services.trilium-service.loadbalancer.server.port=8080"
       - "homepage.group=Media"
       - "homepage.name=Trilium"
       - "homepage.icon=trilium"
-      - "homepage.href=https://trilium.home.aquiver.de"
+      - "homepage.href=https://trilium.${SUBDOMAIN:-home}.aquiver.de"
 
 
 networks:

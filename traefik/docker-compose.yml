@@ -20,15 +20,15 @@ services:
       - backbone
       - internet
     # To make authentication for non internet containers work
-    hostname: auth.home.aquiver.de
+    hostname: auth.${SUBDOMAIN:-home}.aquiver.de
     labels:
       traefik.enable: true
 
       # Dashboard
-      traefik.http.routers.traefik.rule: Host(`traefik.home.aquiver.de`)
+      traefik.http.routers.traefik.rule: Host(`traefik.${SUBDOMAIN:-home}.aquiver.de`)
       traefik.http.routers.traefik.service: api@internal
-      traefik.http.routers.traefik.entrypoints: websecure
-      traefik.http.routers.traefik.tls.certresolver: tlsleresolver
+      # traefik.http.routers.traefik.entrypoints: websecure
+      # traefik.http.routers.traefik.tls.certresolver: wildcard-godaddy
 
 networks:
   internet:
