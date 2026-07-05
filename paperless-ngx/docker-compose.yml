@@ -1,36 +1,3 @@
-# docker-compose file for running paperless from the docker container registry.
-# This file contains everything paperless needs to run.
-# Paperless supports amd64, arm and arm64 hardware.
-#
-# All compose files of paperless configure paperless in the following way:
-#
-# - Paperless is (re)started on system boot, if it was running before shutdown.
-# - Docker volumes for storing data are managed by Docker.
-# - Folders for importing and exporting files are created in the same directory
-#   as this file and mounted to the correct folders inside the container.
-# - Paperless listens on port 8000.
-#
-# In addition to that, this docker-compose file adds the following optional
-# configurations:
-#
-# - Instead of SQLite (default), PostgreSQL is used as the database server.
-# - Apache Tika and Gotenberg servers are started with paperless and paperless
-#   is configured to use these services. These provide support for consuming
-#   Office documents (Word, Excel, Power Point and their LibreOffice counter-
-#   parts.
-#
-# To install and update paperless with this file, do the following:
-#
-# - Copy this file as 'docker-compose.yml' and the files 'docker-compose.env'
-#   and '.env' into a folder.
-# - Run 'docker-compose pull'.
-# - Run 'docker-compose run --rm webserver createsuperuser' to create a user.
-# - Run 'docker-compose up -d'.
-#
-# For more extensive installation and update instructions, refer to the
-# documentation.
-
-version: "3.4"
 services:
   broker:
     image: docker.io/library/redis:8
@@ -141,6 +108,19 @@ services:
     networks:
       - no-internet
       - traefik_backbone
+
+  sftp:
+    image: atmoz/sftp
+    volumes:
+      - ./consume:/home/paperless/upload
+      - ./keys/publickey.pub:/home/paperless/.ssh/keys/publickey.pub:ro
+      - ./keys/host/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
+      - ./keys/host/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
+      - ./keys/host/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro
+    ports:
+      - "2222:22"
+    command: paperless::1000:1000
+    restart: on-failure
 
 
 volumes:
