@@ -56,6 +56,10 @@ services:
       - "traefik.http.routers.recipes.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.recipes.service=recipes-service@docker"
       - "traefik.http.services.recipes-service.loadbalancer.server.port=80"
+      - "homepage.group=Apps"
+      - "homepage.name=Tandoor Recipes"
+      - "homepage.icon=tandoor-recipes"
+      - "homepage.href=https://recipes.home.aquiver.de/"
 
 networks:
   no-internet:
