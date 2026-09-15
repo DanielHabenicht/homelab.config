@@ -18,6 +18,7 @@ services:
       GRAMPSWEB_OIDC_NAME: "Pocket ID"
       GRAMPSWEB_OIDC_AUTO_REDIRECT: true
       GRAMPSWEB_OIDC_DISABLE_LOCAL_AUTH: true
+      GUNICORN_NUM_WORKERS: 4
     depends_on:
       - grampsweb_redis
     volumes:
@@ -38,6 +39,10 @@ services:
       - "traefik.http.routers.gramps.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.gramps.service=gramps-service@docker"
       - "traefik.http.services.gramps-service.loadbalancer.server.port=5000"
+      - "homepage.group=Apps"
+      - "homepage.name=Gramps"
+      - "homepage.icon=gramps"
+      - "homepage.href=https://gramps.home.aquiver.de/"
     networks:
       - no-internet
       - traefik_backbone
