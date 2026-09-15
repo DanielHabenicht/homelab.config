@@ -1,0 +1,39 @@
+
+services:
+  bonds:
+    image: ghcr.io/naiba/bonds:latest
+    volumes:
+      - ./bonds-data:/app/data
+    environment:
+      - SERVER_PORT=8080
+      - DB_DRIVER=sqlite
+      - DB_DSN=/app/data/bonds.db
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set to a strong random value before running docker compose}
+      - APP_ENV=production
+      - APP_URL=http://localhost:8080
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.bonds.rule=Host(`bonds.home.aquiver.de`)"
+      - "traefik.http.routers.bonds.service=bonds-service@docker"
+      - "traefik.http.services.bonds-service.loadbalancer.server.port=8080"
+      - "homepage.group=Media"
+      - "homepage.name=Bonds"
+      - "homepage.icon=bonds"
+      - "homepage.href=https://bonds.home.aquiver.de/"
+    networks:
+      - no-internet
+      - traefik_backbone
+     # - internet
+
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
