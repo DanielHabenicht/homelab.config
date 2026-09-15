@@ -105,6 +105,10 @@ services:
       - "traefik.http.routers.pdfedit.service=pdfedit-service@docker"
       - "traefik.http.services.pdfedit-service.loadbalancer.server.port=8080"
       - "traefik.http.middlewares.limit.buffering.memRequestBodyBytes=4000000"
+      - "homepage.group=Documents"
+      - "homepage.name=Scanner Import"
+      - "homepage.icon="
+      - "homepage.href=https://import.home.aquiver.de/"
     networks:
       - no-internet
       - traefik_backbone
