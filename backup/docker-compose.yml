@@ -1,0 +1,79 @@
+# Automated, encrypted backups of all stacks to the SMB share.
+# One cron job per file in ./conf.d, see README.md.
+
+services:
+  backup:
+    image: offen/docker-volume-backup:v2
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Berlin
+      # Defaults for every file in ./conf.d (a file can override them)
+      BACKUP_CRON_EXPRESSION: "0 3 * * *"
+      BACKUP_RETENTION_DAYS: "14"
+      BACKUP_PRUNING_LEEWAY: "10m"
+      # Leave empty to store unencrypted archives
+      AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./conf.d:/etc/dockervolumebackup/conf.d:ro
+      - smb-backup:/archive
+
+      # Stacks with bind mounts: the whole directory (data, .env, compose file)
+      - ../actual-budget:/backup/actual-budget:ro
+      - ../bonds:/backup/bonds:ro
+      - ../git-backup:/backup/git-backup:ro
+      - ../homepage:/backup/homepage:ro
+      - ../immich:/backup/immich:ro
+      - ../mailarchiva:/backup/mailarchiva:ro
+      - ../monica:/backup/monica:ro
+      - ../n8n:/backup/n8n:ro
+      - ../pocketid:/backup/pocketid:ro
+      - ../super-productivity:/backup/super-productivity:ro
+      - ../tandoor-recipes:/backup/tandoor-recipes:ro
+      - ../traefik:/backup/traefik:ro
+      - ../trilium:/backup/trilium:ro
+      - ../ubiquiti:/backup/ubiquiti:ro
+
+      # Stacks with named volumes
+      - ../gramps:/backup/gramps/compose:ro
+      - gramps_users:/backup/gramps/users:ro
+      - gramps_secret:/backup/gramps/secret:ro
+      - gramps_db:/backup/gramps/db:ro
+      - gramps_media:/backup/gramps/media:ro
+      - ../paperless-ngx:/backup/paperless-ngx/compose:ro
+      - paperless_data:/backup/paperless-ngx/data:ro
+      - paperless_media:/backup/paperless-ngx/media:ro
+      - paperless_pgdata:/backup/paperless-ngx/pgdata:ro
+    # The SMB share is mounted by the Docker host, the container itself
+    # needs no network. Remove this if you add NOTIFICATION_URLS.
+    network_mode: none
+
+volumes:
+  smb-backup:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//${SMB_HOST:?set SMB_HOST in .env}/${SMB_SHARE:?set SMB_SHARE in .env}"
+      o: "addr=${SMB_HOST},username=${SMB_USERNAME:?set SMB_USERNAME in .env},password=${SMB_PASSWORD:?set SMB_PASSWORD in .env},vers=3.0,uid=0,gid=0,file_mode=0600,dir_mode=0700"
+
+  gramps_users:
+    external: true
+    name: gramps_gramps_users
+  gramps_secret:
+    external: true
+    name: gramps_gramps_secret
+  gramps_db:
+    external: true
+    name: gramps_gramps_db
+  gramps_media:
+    external: true
+    name: gramps_gramps_media
+  paperless_data:
+    external: true
+    name: paperless-ngx_data
+  paperless_media:
+    external: true
+    name: paperless-ngx_media
+  paperless_pgdata:
+    external: true
+    name: paperless-ngx_pgdata

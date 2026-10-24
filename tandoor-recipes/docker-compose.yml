@@ -14,6 +14,8 @@ services:
     depends_on:
       db_recipes-init:
         condition: service_completed_successfully
+    labels:
+      - "docker-volume-backup.stop-during-backup=tandoor-recipes"
     restart: always
     image: postgres:15-alpine
     user: "1000:1000"
@@ -48,6 +50,7 @@ services:
       - traefik_backbone
 
     labels: # traefik example labels
+      - "docker-volume-backup.stop-during-backup=tandoor-recipes"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.recipes.entrypoints=websecure"

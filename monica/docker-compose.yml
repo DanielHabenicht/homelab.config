@@ -23,6 +23,7 @@ services:
       - default
       - traefik_backbone
     labels:
+      - "docker-volume-backup.stop-during-backup=monica"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.monica.rule=Host(`monica.home.aquiver.de`)"
@@ -40,6 +41,8 @@ services:
       - .env
     volumes:
       - ./mysql:/var/lib/mysql
+    labels:
+      - "docker-volume-backup.stop-during-backup=monica"
     restart: unless-stopped
     networks:
       - default

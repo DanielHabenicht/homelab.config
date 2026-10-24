@@ -19,6 +19,7 @@ services:
       - traefik_backbone
       - no-internet
     labels:
+      - "docker-volume-backup.stop-during-backup=pocketid"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.pocketid.rule=Host(`auth.${SUBDOMAIN:-home}.aquiver.de`)"

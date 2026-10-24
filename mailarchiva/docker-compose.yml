@@ -20,6 +20,8 @@ services:
         MAILARCHIVA_VERSION: 9.0.36
       # dockerfile: Dockerfile8 # <- enable to (keep) using version 8 of Mailarchiva
     image: mailarchiva:latest
+    labels:
+      - "docker-volume-backup.stop-during-backup=mailarchiva"
     restart: unless-stopped
     ports:
       - "0.0.0.0:8081:80"

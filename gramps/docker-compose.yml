@@ -31,6 +31,7 @@ services:
       - gramps_media:/app/media  # persist media files
       - gramps_tmp:/tmp
     labels:
+      - "docker-volume-backup.stop-during-backup=gramps"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.gramps.rule=Host(`gramps.home.aquiver.de`)"
@@ -55,7 +56,8 @@ services:
       - grampsweb
       - grampsweb_redis
     command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
-    labels: []
+    labels:
+      - "docker-volume-backup.stop-during-backup=gramps"
 
   grampsweb_redis:
     image: redis:alpine
