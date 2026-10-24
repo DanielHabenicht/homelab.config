@@ -8,7 +8,8 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
 - Jobs with the same schedule run one after another.
 - Containers labeled `docker-volume-backup.stop-during-backup=<stack>` are stopped while their stack is archived
   (databases, SQLite files) and started again afterwards.
-- Bind-mounted stacks are archived as the whole directory, including the gitignored `.env` files and secrets.
+- Only data and local config are archived (data folders, named volumes, `.env` files, secrets). Files tracked in git
+  are skipped via `BACKUP_EXCLUDE_REGEXP` in `docker-compose.yml`, they are restored by cloning this repo.
 
 ## Setup
 
@@ -40,7 +41,8 @@ age -d -o pocketid.tar.gz pocketid-2026-10-25T03-00-00.tar.gz.age   # asks for t
 tar -xzf pocketid.tar.gz                                             # extracts to backup/pocketid/
 ```
 
-Stop the stack, replace its directory (or the contents of its named volumes for `gramps` and `paperless-ngx`) and start it again.
+Clone this repo, copy the extracted files into the stack directory (or into the named volumes for `gramps` and `paperless-ngx`)
+and start the stack.
 
 Immich: the live `postgres/` directory is not archived. Restore the database from the dump in
 `library/backups/` as described in the [Immich docs](https://immich.app/docs/administration/backup-and-restore).
@@ -51,7 +53,8 @@ Immich: the live `postgres/` directory is not archived. Restore the database fro
    (named volumes need an `external` entry using the full volume name, e.g. `paperless-ngx_data`).
 2. Copy one of the files in `conf.d/` to `conf.d/<stack>.env` and replace the name.
 3. Add the label `docker-volume-backup.stop-during-backup=<stack>` to its containers that write databases.
-4. `docker compose up -d --force-recreate` here.
+4. If the stack has tracked files with new names, add them to `BACKUP_EXCLUDE_REGEXP` in `docker-compose.yml`.
+5. `docker compose up -d --force-recreate` here.
 
 Not covered: `windmill` (its ports conflict with traefik, so it does not seem to be deployed) and
 `homebox`, `navidrome`, `trek` (no compose file in this repo).

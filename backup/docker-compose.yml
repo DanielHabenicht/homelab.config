@@ -13,12 +13,17 @@ services:
       BACKUP_PRUNING_LEEWAY: "10m"
       # Leave empty to store unencrypted archives
       AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
+      # Only data and local config: skip everything that is tracked in git,
+      # plus Immich's live database, thumbnails and transcoded videos
+      # (restored from Immich's own dumps / regenerated after a restore).
+      BACKUP_EXCLUDE_REGEXP: >-
+        ^/backup/[^/]+/(files/)?(docker-compose\.yml|\.gitignore|README\.md|readme\.md|\.env\.example|init-mongo\.js|conf\.yml|traefik\.yml|dynamic\.yml|Dockerfile|imap-oauth-proxy/.*|config/(settings|kubernetes|docker|proxmox|bookmarks|widgets)\.yaml|config/custom\.(js|css)|config/logs/.*)$$|^/backup/immich/(postgres|library/thumbs|library/encoded-video)/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
       - smb-backup:/archive
 
-      # Stacks with bind mounts: the whole directory (data, .env, compose file)
+      # Stacks with bind mounts: the whole directory, files tracked in git are excluded above
       - ../actual-budget:/backup/actual-budget:ro
       - ../bonds:/backup/bonds:ro
       - ../git-backup:/backup/git-backup:ro
@@ -35,12 +40,11 @@ services:
       - ../ubiquiti:/backup/ubiquiti:ro
 
       # Stacks with named volumes
-      - ../gramps:/backup/gramps/compose:ro
       - gramps_users:/backup/gramps/users:ro
       - gramps_secret:/backup/gramps/secret:ro
       - gramps_db:/backup/gramps/db:ro
       - gramps_media:/backup/gramps/media:ro
-      - ../paperless-ngx:/backup/paperless-ngx/compose:ro
+      - ../paperless-ngx:/backup/paperless-ngx/files:ro
       - paperless_data:/backup/paperless-ngx/data:ro
       - paperless_media:/backup/paperless-ngx/media:ro
       - paperless_pgdata:/backup/paperless-ngx/pgdata:ro
