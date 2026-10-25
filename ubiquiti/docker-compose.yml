@@ -14,8 +14,6 @@ services:
     #   - target: 27017
     #     published: "27017"
     #     protocol: tcp
-    labels:
-      - "docker-volume-backup.stop-during-backup=ubiquiti"
     restart: unless-stopped
     volumes:
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
@@ -65,8 +63,6 @@ services:
       - target: 5514 #optional
         published: "5514"
         protocol: udp
-    labels:
-      - "docker-volume-backup.stop-during-backup=ubiquiti"
     restart: unless-stopped
     volumes:
       - ./unifi-network-application:/config

@@ -14,16 +14,16 @@ services:
       # Leave empty to store unencrypted archives
       AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
       # Only data and local config: skip everything that is tracked in git,
-      # plus Immich's live database, thumbnails and transcoded videos
-      # (restored from Immich's own dumps / regenerated after a restore).
+      # live database files that are backed up as dumps instead (Immich,
+      # Monica, Tandoor), Immich thumbnails/transcodes and MailArchiva logs.
       BACKUP_EXCLUDE_REGEXP: >-
-        ^/backup/[^/]+/(files/)?(docker-compose\.yml|\.gitignore|README\.md|readme\.md|\.env\.example|init-mongo\.js|conf\.yml|traefik\.yml|dynamic\.yml|Dockerfile|imap-oauth-proxy/.*|config/(settings|kubernetes|docker|proxmox|bookmarks|widgets)\.yaml|config/custom\.(js|css)|config/logs/.*)$$|^/backup/immich/(postgres|library/thumbs|library/encoded-video)/
+        ^/backup/[^/]+/(docker-compose\.yml|\.gitignore|README\.md|readme\.md|\.env\.example|init-mongo\.js|conf\.yml|traefik\.yml|dynamic\.yml|Dockerfile|imap-oauth-proxy/.*|config/(settings|kubernetes|docker|proxmox|bookmarks|widgets)\.yaml|config/custom\.(js|css)|config/logs/.*)$$|^/backup/(immich/postgres|immich/library/thumbs|immich/library/encoded-video|monica/mysql|tandoor-recipes/postgresql|mailarchiva/data/logs)/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
       - smb-backup:/archive
 
-      # Stacks with bind mounts: the whole directory, files tracked in git are excluded above
+      # Stacks with bind mounts: the whole directory, files excluded above are skipped
       - ../actual-budget:/backup/actual-budget:ro
       - ../bonds:/backup/bonds:ro
       - ../git-backup:/backup/git-backup:ro
@@ -32,22 +32,20 @@ services:
       - ../mailarchiva:/backup/mailarchiva:ro
       - ../monica:/backup/monica:ro
       - ../n8n:/backup/n8n:ro
+      - ../paperless-ngx:/backup/paperless-ngx:ro
       - ../pocketid:/backup/pocketid:ro
       - ../super-productivity:/backup/super-productivity:ro
       - ../tandoor-recipes:/backup/tandoor-recipes:ro
       - ../traefik:/backup/traefik:ro
       - ../trilium:/backup/trilium:ro
-      - ../ubiquiti:/backup/ubiquiti:ro
+      # UniFi: only the controller's autobackups
+      - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti:ro
 
-      # Stacks with named volumes
+      # Gramps uses named volumes
       - gramps_users:/backup/gramps/users:ro
       - gramps_secret:/backup/gramps/secret:ro
       - gramps_db:/backup/gramps/db:ro
       - gramps_media:/backup/gramps/media:ro
-      - ../paperless-ngx:/backup/paperless-ngx/files:ro
-      - paperless_data:/backup/paperless-ngx/data:ro
-      - paperless_media:/backup/paperless-ngx/media:ro
-      - paperless_pgdata:/backup/paperless-ngx/pgdata:ro
     # The SMB share is mounted by the Docker host, the container itself
     # needs no network. Remove this if you add NOTIFICATION_URLS.
     network_mode: none
@@ -72,12 +70,3 @@ volumes:
   gramps_media:
     external: true
     name: gramps_gramps_media
-  paperless_data:
-    external: true
-    name: paperless-ngx_data
-  paperless_media:
-    external: true
-    name: paperless-ngx_media
-  paperless_pgdata:
-    external: true
-    name: paperless-ngx_pgdata
