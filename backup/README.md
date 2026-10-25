@@ -26,7 +26,8 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). | Pipe `monica.sql` into `mariadb` in a fresh db container. |
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
-| actual-budget, bonds, gramps, pocketid, trilium | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
+| actual-budget, bonds, gramps, pocketid | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
+| trilium | Only Trilium's own database copies in `trilium-data/backup` (daily, weekly, monthly; up to a day old). Runs while Trilium is running. | Copy the wanted `backup-*.db` to `document.db` while Trilium is stopped, or use *Restore from backup* ([docs](https://docs.triliumnotes.org/user-guide/setup/backup)). |
 | super-productivity | WebDAV server stopped and its files copied. | Copy the files back. |
 | git-backup | The mirrored repositories, copied while running. | Copy the files back. |
 
@@ -36,7 +37,6 @@ Considered but not used:
 - **Bonds**: has scheduled backups (Admin UI, written to `bonds-data/backups`). They are covered as well, but copying the stopped database is more current.
 - **Gramps Web**: Gramps XML export only exists in the UI, there is no command for it.
 - **Pocket ID**: `pocket-id export` creates a full archive, but the docs mark it as experimental.
-- **Trilium**: keeps one daily, weekly and monthly copy in `trilium-data/backup`. They are archived too, but are up to a day old.
 
 ## Setup
 

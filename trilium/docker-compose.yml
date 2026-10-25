@@ -22,7 +22,6 @@ services:
       - default
       - traefik_backbone
     labels:
-      - "docker-volume-backup.stop-during-backup=trilium"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.trilium.rule=Host(`trilium.${SUBDOMAIN:-home}.aquiver.de`)"

@@ -35,7 +35,8 @@ services:
       - ../super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
       - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
       - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
-      - ../trilium/trilium-data:/backup/trilium/trilium-data:ro
+      # Trilium: only its own daily/weekly/monthly database copies
+      - ../trilium/trilium-data/backup:/backup/trilium/backup:ro
       - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
 
       # Gramps uses named volumes
