@@ -11,6 +11,8 @@ services:
       BACKUP_CRON_EXPRESSION: "0 3 * * *"
       BACKUP_RETENTION_DAYS: "14"
       BACKUP_PRUNING_LEEWAY: "10m"
+      # zstd is much faster than the default gzip at a similar size
+      BACKUP_COMPRESSION: "zst"
       # Leave empty to store unencrypted archives
       AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
     volumes:

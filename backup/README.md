@@ -3,7 +3,7 @@
 Automated backups of all stacks with [offen/docker-volume-backup](https://offen.github.io/docker-volume-backup/),
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
-- Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.gz.age`).
+- Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.zst.age`, zstd-compressed).
 - Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted.
 - **Immich is disabled for now** (full copy of the photo library every run). Its job is in
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
@@ -80,7 +80,7 @@ Then test one stack at a time:
 docker compose restart backup               # needed if the stack folder did not exist before
 docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
 ls -l test-archive/
-age -d test-archive/pocketid-*.tar.gz.age | tar -tzv    # check the content
+age -d test-archive/pocketid-*.tar.zst.age | tar --zstd -tv    # check the content
 ```
 
 For stacks with a dump command (paperless-ngx, tandoor-recipes, monica), also check the dump folder
@@ -94,8 +94,8 @@ rm -r test-archive
 ## Restore
 
 ```sh
-age -d -o pocketid.tar.gz pocketid-2026-10-25T03-00-00.tar.gz.age   # asks for the passphrase
-tar -xzf pocketid.tar.gz                                             # extracts to backup/pocketid/
+age -d -o pocketid.tar.zst pocketid-2026-10-25T03-00-00.tar.zst.age   # asks for the passphrase
+tar --zstd -xf pocketid.tar.zst                                        # extracts to backup/pocketid/ (needs zstd installed)
 ```
 
 Clone this repo, copy the extracted files into the stack directory (or into the named volumes for `gramps`; a new Flask secret is generated on start)
