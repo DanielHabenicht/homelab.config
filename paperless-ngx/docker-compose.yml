@@ -54,6 +54,9 @@ services:
       PAPERLESS_DISABLE_REGULAR_LOGIN: true
       PAPERLESS_REDIRECT_LOGIN_TO_SSO: true
     labels:
+      # Backup: export documents and database to ./export before archiving
+      - "docker-volume-backup.exec-label=paperless-ngx"
+      - "docker-volume-backup.archive-pre=document_exporter ../export --no-progress-bar --delete"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.paperless.rule=Host(`documents.${SUBDOMAIN:-home}.aquiver.de`)"

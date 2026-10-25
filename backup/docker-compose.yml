@@ -1,0 +1,68 @@
+# Automated, encrypted backups of all stacks to the SMB share.
+# One cron job per file in ./conf.d, see README.md.
+
+services:
+  backup:
+    image: offen/docker-volume-backup:v2
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Berlin
+      # Defaults for every file in ./conf.d (a file can override them)
+      BACKUP_CRON_EXPRESSION: "0 3 * * *"
+      BACKUP_RETENTION_DAYS: "14"
+      BACKUP_PRUNING_LEEWAY: "10m"
+      # zstd is much faster than the default gzip at a similar size
+      BACKUP_COMPRESSION: "zst"
+      # Leave empty to store unencrypted archives
+      AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./conf.d:/etc/dockervolumebackup/conf.d:ro
+      - smb-backup:/archive
+
+      # Only application data, no config files or secrets
+      - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
+      - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
+      - ../git-backup/backup:/backup/git-backup/backup:ro
+      # Immich: disabled for now (full copy of the photo library every run).
+      # To enable, uncomment and move conf.disabled/immich.env to conf.d/.
+      # - ../immich/library/backups:/backup/immich/library/backups:ro
+      # - ../immich/library/library:/backup/immich/library/library:ro
+      # - ../immich/library/profile:/backup/immich/library/profile:ro
+      # - ../immich/library/upload:/backup/immich/library/upload:ro
+      - ../monica/data:/backup/monica/data:ro
+      - ../monica/db-dump:/backup/monica/db-dump:ro
+      - ../paperless-ngx/export:/backup/paperless-ngx/export:ro
+      - ../pocketid/data:/backup/pocketid/data:ro
+      - ../super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
+      - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
+      - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
+      # Trilium: only its own daily/weekly/monthly database copies
+      - ../trilium/trilium-data/backup:/backup/trilium/backup:ro
+      - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
+
+      # Gramps uses named volumes
+      - gramps_users:/backup/gramps/users:ro
+      - gramps_db:/backup/gramps/db:ro
+      - gramps_media:/backup/gramps/media:ro
+    # The SMB share is mounted by the Docker host, the container itself
+    # needs no network. Remove this if you add NOTIFICATION_URLS.
+    network_mode: none
+
+volumes:
+  smb-backup:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//${SMB_HOST:?set SMB_HOST in .env}/${SMB_SHARE:?set SMB_SHARE in .env}"
+      o: "addr=${SMB_HOST},username=${SMB_USERNAME:?set SMB_USERNAME in .env},password=${SMB_PASSWORD:?set SMB_PASSWORD in .env},vers=3.0,uid=0,gid=0,file_mode=0600,dir_mode=0700"
+
+  gramps_users:
+    external: true
+    name: gramps_gramps_users
+  gramps_db:
+    external: true
+    name: gramps_gramps_db
+  gramps_media:
+    external: true
+    name: gramps_gramps_media

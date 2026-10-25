@@ -40,6 +40,11 @@ services:
       - .env
     volumes:
       - ./mysql:/var/lib/mysql
+      - ./db-dump:/db-dump
+    labels:
+      # Backup: dump the database to ./db-dump before archiving
+      - "docker-volume-backup.exec-label=monica"
+      - "docker-volume-backup.archive-pre=/bin/sh -c 'mariadb-dump --single-transaction --no-tablespaces -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" \"$$MYSQL_DATABASE\" > /db-dump/monica.sql'"
     restart: unless-stopped
     networks:
       - default

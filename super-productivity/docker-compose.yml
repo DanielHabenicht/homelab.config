@@ -43,6 +43,7 @@ services:
       - no-internet
       - traefik_backbone
     labels:
+      - "docker-volume-backup.stop-during-backup=super-productivity"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.webdav.rule=Host(`webdav.home.aquiver.de`)"

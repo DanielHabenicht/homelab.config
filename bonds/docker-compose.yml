@@ -13,6 +13,7 @@ services:
       - APP_URL=http://localhost:8080
     restart: unless-stopped
     labels:
+      - "docker-volume-backup.stop-during-backup=bonds"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.bonds.rule=Host(`bonds.home.aquiver.de`)"
