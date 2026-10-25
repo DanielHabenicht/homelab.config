@@ -6,8 +6,10 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
 - Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.gz.age`).
 - Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted. Immich runs weekly and keeps 28 days.
 - Jobs with the same schedule run one after another.
-- Only data and local config are archived (data folders, dumps, named volumes, `.env` files, secrets). Files tracked in git
-  are skipped via `BACKUP_EXCLUDE_REGEXP` in `docker-compose.yml`, they are restored by cloning this repo.
+- Only data and local config are mounted into the backup container (data folders, dumps, named volumes, `.env` files,
+  secrets). Everything else is restored by cloning this repo.
+- Single files (`.env`, `acme.json`, ...) are bound by inode. After replacing one of them (e.g. editing with vim),
+  restart the backup container so it sees the new file.
 
 ## How each app is backed up
 
@@ -21,7 +23,7 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). `APP_KEY` is in `.env`. | Pipe `monica.sql` into `mariadb` in a fresh db container. |
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
-| mailarchiva | Copies `data/` while running, which [MailArchiva supports](https://help.mailarchiva.com/enterprise-backup) for the volume store. Logs are skipped. | Copy back, or use *Import Volume*. Needs the same encryption password (in `data/etc`). |
+| mailarchiva | Copies `data/` (without logs) while running, which [MailArchiva supports](https://help.mailarchiva.com/enterprise-backup) for the volume store. | Copy back, or use *Import Volume*. Needs the same encryption password (in `data/etc`). |
 | actual-budget, bonds, gramps, n8n, pocketid, trilium | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
 | super-productivity | WebDAV server stopped and its files copied. | Copy the files back. |
 | traefik, homepage, git-backup | Plain files, copied while running. | Copy the files back. |
@@ -71,15 +73,14 @@ and continue with the app-specific step from the table above.
 
 ## Adding a stack
 
-1. Mount its data into the backup container under `/backup/<stack>` in `docker-compose.yml`
+1. Mount only its data folders and local config files into the backup container under `/backup/<stack>/` in `docker-compose.yml`
    (named volumes need an `external` entry using the full volume name, e.g. `gramps_gramps_db`).
 2. Copy one of the files in `conf.d/` to `conf.d/<stack>.env` and replace the name. Every file needs its own `EXEC_LABEL`,
    otherwise it would run the dump commands of all stacks.
 3. If the app has a dump/export command, add `docker-volume-backup.exec-label=<stack>` and
    `docker-volume-backup.archive-pre=<command>` to that container. Otherwise add
    `docker-volume-backup.stop-during-backup=<stack>` to its containers that write databases.
-4. If the stack has tracked files with new names, add them to `BACKUP_EXCLUDE_REGEXP` in `docker-compose.yml`.
-5. `docker compose up -d --force-recreate` here.
+4. `docker compose up -d --force-recreate` here.
 
 Not covered: `windmill` (its ports conflict with traefik, so it does not seem to be deployed) and
 `homebox`, `navidrome`, `trek` (no compose file in this repo).

@@ -13,33 +13,59 @@ services:
       BACKUP_PRUNING_LEEWAY: "10m"
       # Leave empty to store unencrypted archives
       AGE_PASSPHRASE: ${AGE_PASSPHRASE:-}
-      # Only data and local config: skip everything that is tracked in git,
-      # live database files that are backed up as dumps instead (Immich,
-      # Monica, Tandoor), Immich thumbnails/transcodes and MailArchiva logs.
-      BACKUP_EXCLUDE_REGEXP: >-
-        ^/backup/[^/]+/(docker-compose\.yml|\.gitignore|README\.md|readme\.md|\.env\.example|init-mongo\.js|conf\.yml|traefik\.yml|dynamic\.yml|Dockerfile|imap-oauth-proxy/.*|config/(settings|kubernetes|docker|proxmox|bookmarks|widgets)\.yaml|config/custom\.(js|css)|config/logs/.*)$$|^/backup/(immich/postgres|immich/library/thumbs|immich/library/encoded-video|monica/mysql|tandoor-recipes/postgresql|mailarchiva/data/logs)/
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
       - smb-backup:/archive
 
-      # Stacks with bind mounts: the whole directory, files excluded above are skipped
-      - ../actual-budget:/backup/actual-budget:ro
-      - ../bonds:/backup/bonds:ro
-      - ../git-backup:/backup/git-backup:ro
-      - ../homepage:/backup/homepage:ro
-      - ../immich:/backup/immich:ro
-      - ../mailarchiva:/backup/mailarchiva:ro
-      - ../monica:/backup/monica:ro
-      - ../n8n:/backup/n8n:ro
-      - ../paperless-ngx:/backup/paperless-ngx:ro
-      - ../pocketid:/backup/pocketid:ro
-      - ../super-productivity:/backup/super-productivity:ro
-      - ../tandoor-recipes:/backup/tandoor-recipes:ro
-      - ../traefik:/backup/traefik:ro
-      - ../trilium:/backup/trilium:ro
-      # UniFi: only the controller's autobackups
-      - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti:ro
+      # Only data and local config, everything else is in git.
+      # Single files are bound by inode: restart this container after
+      # replacing one of them (e.g. editing a .env file with vim).
+      - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
+      - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
+      - type: bind
+        source: ../bonds/.env
+        target: /backup/bonds/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - ../git-backup/backup:/backup/git-backup/backup:ro
+      - ../git-backup/token.txt:/backup/git-backup/token.txt:ro
+      - ../homepage/config/services.yaml:/backup/homepage/config/services.yaml:ro
+      # Immich: originals and its own database dumps, no thumbnails/transcodes
+      - ../immich/.env:/backup/immich/.env:ro
+      - ../immich/library/backups:/backup/immich/library/backups:ro
+      - ../immich/library/library:/backup/immich/library/library:ro
+      - ../immich/library/profile:/backup/immich/library/profile:ro
+      - ../immich/library/upload:/backup/immich/library/upload:ro
+      - ../mailarchiva/data/appdata:/backup/mailarchiva/data/appdata:ro
+      - ../mailarchiva/data/etc:/backup/mailarchiva/data/etc:ro
+      - ../mailarchiva/data/storage:/backup/mailarchiva/data/storage:ro
+      - ../mailarchiva/emailproxy.config:/backup/mailarchiva/emailproxy.config:ro
+      - ../monica/.env:/backup/monica/.env:ro
+      - ../monica/data:/backup/monica/data:ro
+      - ../monica/db-dump:/backup/monica/db-dump:ro
+      - ../n8n/n8n_data:/backup/n8n/n8n_data:ro
+      - type: bind
+        source: ../paperless-ngx/.env
+        target: /backup/paperless-ngx/.env
+        read_only: true
+        bind:
+          create_host_path: false
+      - ../paperless-ngx/export:/backup/paperless-ngx/export:ro
+      - ../paperless-ngx/keys:/backup/paperless-ngx/keys:ro
+      - ../paperless-ngx/pdf-edit-config:/backup/paperless-ngx/pdf-edit-config:ro
+      - ../pocketid/.env:/backup/pocketid/.env:ro
+      - ../pocketid/data:/backup/pocketid/data:ro
+      - ../super-productivity/webdav.yaml:/backup/super-productivity/webdav.yaml:ro
+      - ../super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
+      - ../tandoor-recipes/.env:/backup/tandoor-recipes/.env:ro
+      - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
+      - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
+      - ../traefik/.env:/backup/traefik/.env:ro
+      - ../traefik/acme.json:/backup/traefik/acme.json:ro
+      - ../trilium/trilium-data:/backup/trilium/trilium-data:ro
+      - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
 
       # Gramps uses named volumes
       - gramps_users:/backup/gramps/users:ro
