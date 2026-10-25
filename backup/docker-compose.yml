@@ -18,41 +18,30 @@ services:
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
       - smb-backup:/archive
 
-      # Only data and local config files (no .env), everything else is in git.
-      # Single files are bound by inode: restart this container after
-      # replacing one of them (e.g. editing it with vim).
+      # Only application data, no config files or secrets
       - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
       - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
       - ../git-backup/backup:/backup/git-backup/backup:ro
-      - ../git-backup/token.txt:/backup/git-backup/token.txt:ro
-      - ../homepage/config/services.yaml:/backup/homepage/config/services.yaml:ro
       # Immich: originals and its own database dumps, no thumbnails/transcodes
       - ../immich/library/backups:/backup/immich/library/backups:ro
       - ../immich/library/library:/backup/immich/library/library:ro
       - ../immich/library/profile:/backup/immich/library/profile:ro
       - ../immich/library/upload:/backup/immich/library/upload:ro
       - ../mailarchiva/data/appdata:/backup/mailarchiva/data/appdata:ro
-      - ../mailarchiva/data/etc:/backup/mailarchiva/data/etc:ro
       - ../mailarchiva/data/storage:/backup/mailarchiva/data/storage:ro
-      - ../mailarchiva/emailproxy.config:/backup/mailarchiva/emailproxy.config:ro
       - ../monica/data:/backup/monica/data:ro
       - ../monica/db-dump:/backup/monica/db-dump:ro
       - ../n8n/n8n_data:/backup/n8n/n8n_data:ro
       - ../paperless-ngx/export:/backup/paperless-ngx/export:ro
-      - ../paperless-ngx/keys:/backup/paperless-ngx/keys:ro
-      - ../paperless-ngx/pdf-edit-config:/backup/paperless-ngx/pdf-edit-config:ro
       - ../pocketid/data:/backup/pocketid/data:ro
-      - ../super-productivity/webdav.yaml:/backup/super-productivity/webdav.yaml:ro
       - ../super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
       - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
       - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
-      - ../traefik/acme.json:/backup/traefik/acme.json:ro
       - ../trilium/trilium-data:/backup/trilium/trilium-data:ro
       - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
 
       # Gramps uses named volumes
       - gramps_users:/backup/gramps/users:ro
-      - gramps_secret:/backup/gramps/secret:ro
       - gramps_db:/backup/gramps/db:ro
       - gramps_media:/backup/gramps/media:ro
     # The SMB share is mounted by the Docker host, the container itself
@@ -70,9 +59,6 @@ volumes:
   gramps_users:
     external: true
     name: gramps_gramps_users
-  gramps_secret:
-    external: true
-    name: gramps_gramps_secret
   gramps_db:
     external: true
     name: gramps_gramps_db

@@ -6,11 +6,11 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
 - Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.gz.age`).
 - Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted. Immich runs weekly and keeps 28 days.
 - Jobs with the same schedule run one after another.
-- Only data and local config files are mounted into the backup container (data folders, dumps, named volumes).
-  Everything else is restored by cloning this repo. `.env` files are **not** backed up, keep them (e.g. Monica's
-  `APP_KEY`) somewhere else.
-- Single files (`acme.json`, `token.txt`, ...) are bound by inode. After replacing one of them (e.g. editing with vim),
-  restart the backup container so it sees the new file.
+- Only application data is mounted into the backup container (data folders, dumps, named volumes).
+  Config files and secrets are **not** backed up: `.env` files, `traefik/acme.json`, `git-backup/token.txt`,
+  `homepage/config/services.yaml`, `super-productivity/webdav.yaml`, paperless `keys/` and `pdf-edit-config/`,
+  mailarchiva `data/etc/` and `emailproxy.config`, the gramps secret volume. Keep what you need for a restore
+  (e.g. Monica's `APP_KEY`, the MailArchiva encryption password) somewhere else.
 
 ## How each app is backed up
 
@@ -24,10 +24,10 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). | Pipe `monica.sql` into `mariadb` in a fresh db container. |
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
-| mailarchiva | Copies `data/` (without logs) while running, which [MailArchiva supports](https://help.mailarchiva.com/enterprise-backup) for the volume store. | Copy back, or use *Import Volume*. Needs the same encryption password (in `data/etc`). |
+| mailarchiva | Copies `data/` (without logs) while running, which [MailArchiva supports](https://help.mailarchiva.com/enterprise-backup) for the volume store. | Copy back, or use *Import Volume*. Needs the same encryption password, which is **not** in the backup. |
 | actual-budget, bonds, gramps, n8n, pocketid, trilium | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
 | super-productivity | WebDAV server stopped and its files copied. | Copy the files back. |
-| traefik, homepage, git-backup | Plain files, copied while running. | Copy the files back. |
+| git-backup | The mirrored repositories, copied while running. | Copy the files back. |
 
 Considered but not used:
 
@@ -69,12 +69,12 @@ age -d -o pocketid.tar.gz pocketid-2026-10-25T03-00-00.tar.gz.age   # asks for t
 tar -xzf pocketid.tar.gz                                             # extracts to backup/pocketid/
 ```
 
-Clone this repo, copy the extracted files into the stack directory (or into the named volumes for `gramps`)
+Clone this repo, copy the extracted files into the stack directory (or into the named volumes for `gramps`; a new Flask secret is generated on start)
 and continue with the app-specific step from the table above.
 
 ## Adding a stack
 
-1. Mount only its data folders and local config files into the backup container under `/backup/<stack>/` in `docker-compose.yml`
+1. Mount only its data folders into the backup container under `/backup/<stack>/` in `docker-compose.yml`
    (named volumes need an `external` entry using the full volume name, e.g. `gramps_gramps_db`).
 2. Copy one of the files in `conf.d/` to `conf.d/<stack>.env` and replace the name. Every file needs its own `EXEC_LABEL`,
    otherwise it would run the dump commands of all stacks.
