@@ -37,25 +37,21 @@ Considered but not used:
 
 ## Setup
 
-1. Mount the SMB share on the host permanently. Add to `/etc/fstab` (the credentials path must be absolute):
+1. Install the CIFS tools on the Docker host: `sudo apt install cifs-utils`
+2. `cp .env.example .env` and fill in the share and the age passphrase.
+   Use the IP address of the NAS for `SMB_HOST`. Store the passphrase outside the homelab, without it the backups are useless.
+3. Recreate the stacks so the new labels and mounts are applied (`docker compose up -d` in every changed stack directory).
+4. Enable the UniFi autobackups (see table).
+5. `docker compose up -d` in this directory.
 
-   ```
-   //192.168.178.152/apps-backup /mnt/truenas_backup cifs credentials=/root/.credentials,_netdev,nofail,x-systemd.automount 0 0
-   ```
+The SMB share is mounted by Docker when the container starts. If the share is not reachable at that time,
+the container does not start (and no backups run) until you run `docker compose up -d` here again.
+If the share disappears later, the runs fail and show up in `docker compose logs backup`.
+To get notified about failures, set `NOTIFICATION_URLS` (see the [docs](https://offen.github.io/docker-volume-backup/reference/))
+and remove `network_mode: none`.
 
-   Then `sudo systemctl daemon-reload && sudo mount /mnt/truenas_backup`.
-2. Create the target folder on the share: `sudo mkdir /mnt/truenas_backup/homelab`
-3. `cp .env.example .env` and set the age passphrase (and `BACKUP_TARGET` if you use another folder).
-   Store the passphrase outside the homelab, without it the backups are useless.
-4. Recreate the stacks so the new labels and mounts are applied (`docker compose up -d` in every changed stack directory).
-5. Enable the UniFi autobackups (see table).
-6. `docker compose up -d` in this directory.
-
-The `homelab` folder only exists on the share. If the share is not mounted when the container starts, the folder is
-missing and the container does not start (instead of silently writing to the local disk). Run `docker compose up -d`
-here again once the share is back. If the share disappears while the container runs, the runs fail and show up in
-`docker compose logs backup`. To get notified about failures, set `NOTIFICATION_URLS`
-(see the [docs](https://offen.github.io/docker-volume-backup/reference/)) and remove `network_mode: none`.
+Docker stores the SMB options when it creates the volume. After changing `SMB_*` in `.env`, run
+`docker compose down && docker volume rm backup_smb-backup && docker compose up -d`.
 
 ## Run a backup now
 
@@ -70,7 +66,7 @@ docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocke
 `compose.test.yml` writes the archives to `./test-archive` instead of the share.
 
 ```sh
-cp .env.example .env            # set AGE_PASSPHRASE
+cp .env.example .env            # dummy SMB_* values are fine, set AGE_PASSPHRASE
 docker compose -f docker-compose.yml -f compose.test.yml up -d
 ```
 

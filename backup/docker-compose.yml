@@ -16,14 +16,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
-      # SMB share mounted on the host (see README). The sub folder must
-      # exist on the share, so nothing is written to the local disk when
-      # the share is not mounted: the container refuses to start instead.
-      - type: bind
-        source: ${BACKUP_TARGET:-/mnt/truenas_backup/homelab}
-        target: /archive
-        bind:
-          create_host_path: false
+      - smb-backup:/archive
 
       # Only application data, no config files or secrets
       - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
@@ -48,10 +41,18 @@ services:
       - gramps_users:/backup/gramps/users:ro
       - gramps_db:/backup/gramps/db:ro
       - gramps_media:/backup/gramps/media:ro
-    # Needs no network. Remove this if you add NOTIFICATION_URLS.
+    # The SMB share is mounted by the Docker host, the container itself
+    # needs no network. Remove this if you add NOTIFICATION_URLS.
     network_mode: none
 
 volumes:
+  smb-backup:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//${SMB_HOST:?set SMB_HOST in .env}/${SMB_SHARE:?set SMB_SHARE in .env}"
+      o: "addr=${SMB_HOST},username=${SMB_USERNAME:?set SMB_USERNAME in .env},password=${SMB_PASSWORD:?set SMB_PASSWORD in .env},vers=3.0,uid=0,gid=0,file_mode=0600,dir_mode=0700"
+
   gramps_users:
     external: true
     name: gramps_gramps_users
