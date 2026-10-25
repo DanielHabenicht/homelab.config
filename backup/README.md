@@ -9,8 +9,7 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
 - Only application data is mounted into the backup container (data folders, dumps, named volumes).
   Config files and secrets are **not** backed up: `.env` files, `traefik/acme.json`, `git-backup/token.txt`,
   `homepage/config/services.yaml`, `super-productivity/webdav.yaml`, paperless `keys/` and `pdf-edit-config/`,
-  mailarchiva `data/etc/` and `emailproxy.config`, the gramps secret volume. Keep what you need for a restore
-  (e.g. Monica's `APP_KEY`, the MailArchiva encryption password) somewhere else.
+  the gramps secret volume. Keep what you need for a restore (e.g. Monica's `APP_KEY`) somewhere else.
 
 ## How each app is backed up
 
@@ -24,8 +23,7 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). | Pipe `monica.sql` into `mariadb` in a fresh db container. |
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
-| mailarchiva | Copies `data/` (without logs) while running, which [MailArchiva supports](https://help.mailarchiva.com/enterprise-backup) for the volume store. | Copy back, or use *Import Volume*. Needs the same encryption password, which is **not** in the backup. |
-| actual-budget, bonds, gramps, n8n, pocketid, trilium | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
+| actual-budget, bonds, gramps, pocketid, trilium | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
 | super-productivity | WebDAV server stopped and its files copied. | Copy the files back. |
 | git-backup | The mirrored repositories, copied while running. | Copy the files back. |
 
@@ -34,7 +32,6 @@ Considered but not used:
 - **Actual Budget**: only has a per-budget export in the UI, nothing for the server.
 - **Bonds**: has scheduled backups (Admin UI, written to `bonds-data/backups`). They are covered as well, but copying the stopped database is more current.
 - **Gramps Web**: Gramps XML export only exists in the UI, there is no command for it.
-- **n8n**: `n8n export:workflow` / `export:credentials` only cover workflows and credentials, `export:entities` is meant for migrations.
 - **Pocket ID**: `pocket-id export` creates a full archive, but the docs mark it as experimental.
 - **Trilium**: keeps one daily, weekly and monthly copy in `trilium-data/backup`. They are archived too, but are up to a day old.
 
@@ -83,5 +80,5 @@ and continue with the app-specific step from the table above.
    `docker-volume-backup.stop-during-backup=<stack>` to its containers that write databases.
 4. `docker compose up -d --force-recreate` here.
 
-Not covered: `windmill` (its ports conflict with traefik, so it does not seem to be deployed) and
+Not covered: `mailarchiva`, `n8n` (excluded on purpose), `windmill` (its ports conflict with traefik, so it does not seem to be deployed) and
 `homebox`, `navidrome`, `trek` (no compose file in this repo).
