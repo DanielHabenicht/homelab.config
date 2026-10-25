@@ -5,14 +5,6 @@ services:
   backup:
     image: offen/docker-volume-backup:v2
     restart: unless-stopped
-    # Create one folder per job on the share, then start the scheduler as
-    # the image would (the copy is skipped if the folder does not exist)
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        for f in /etc/dockervolumebackup/conf.d/*.env; do mkdir -p "/archive/$$(basename "$$f" .env)"; done
-        exec /usr/bin/backup -foreground
     environment:
       TZ: Europe/Berlin
       # Defaults for every file in ./conf.d (a file can override them)

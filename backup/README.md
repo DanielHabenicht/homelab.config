@@ -3,8 +3,7 @@
 Automated backups of all stacks with [offen/docker-volume-backup](https://offen.github.io/docker-volume-backup/),
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
-- Every file in `conf.d/` is one backup job, writing one archive per run into its own folder on the share
-  (e.g. `pocketid/pocketid-2026-10-25T03-00-00.tar.gz.age`). The folders are created when the container starts.
+- Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.gz.age`).
 - Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted.
 - **Immich is disabled for now** (full copy of the photo library every run). Its job is in
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
@@ -80,8 +79,8 @@ Then test one stack at a time:
 (cd ../pocketid && docker compose up -d)    # recreate the stack so new labels/mounts apply
 docker compose restart backup               # needed if the stack folder did not exist before
 docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
-ls -l test-archive/pocketid/
-age -d test-archive/pocketid/pocketid-*.tar.gz.age | tar -tzv    # check the content
+ls -l test-archive/
+age -d test-archive/pocketid-*.tar.gz.age | tar -tzv    # check the content
 ```
 
 For stacks with a dump command (paperless-ngx, tandoor-recipes, monica), also check the dump folder
