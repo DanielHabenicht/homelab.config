@@ -4,7 +4,7 @@ Automated backups of all stacks with [offen/docker-volume-backup](https://offen.
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
 - Every file in `conf.d/` is one backup job, writing one archive per run into its own folder on the share
-  (e.g. `pocketid/pocketid-2026-10-25T03-00-00.tar.gz.age`).
+  (e.g. `pocketid/pocketid-2026-10-25T03-00-00.tar.gz.age`). The folders are created when the container starts.
 - Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted.
 - **Immich is disabled for now** (full copy of the photo library every run). Its job is in
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
@@ -47,13 +47,6 @@ Considered but not used:
 3. Recreate the stacks so the new labels and mounts are applied (`docker compose up -d` in every changed stack directory).
 4. Enable the UniFi autobackups (see table).
 5. `docker compose up -d` in this directory.
-6. Create one folder per job on the share (the tool silently skips the copy if the folder is missing):
-
-   ```sh
-   docker compose exec backup sh -c 'for f in /etc/dockervolumebackup/conf.d/*.env; do mkdir -p /archive/$(basename $f .env); done'
-   ```
-
-   Run this again after adding a job.
 
 The SMB share is mounted by Docker when the container starts. If the share is not reachable at that time,
 the container does not start (and no backups run) until you run `docker compose up -d` here again.
@@ -79,7 +72,6 @@ docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocke
 ```sh
 cp .env.example .env            # dummy SMB_* values are fine, set AGE_PASSPHRASE
 docker compose -f docker-compose.yml -f compose.test.yml up -d
-docker compose exec backup sh -c 'for f in /etc/dockervolumebackup/conf.d/*.env; do mkdir -p /archive/$(basename $f .env); done'
 ```
 
 Then test one stack at a time:
