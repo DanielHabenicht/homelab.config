@@ -4,7 +4,10 @@ Automated backups of all stacks with [offen/docker-volume-backup](https://offen.
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
 - Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.gz.age`).
-- Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted. Immich runs weekly and keeps 28 days.
+- Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted.
+- **Immich is disabled for now** (full copy of the photo library every run). Its job is in
+  `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
+  Immich mounts in `docker-compose.yml`.
 - Jobs with the same schedule run one after another.
 - Only application data is mounted into the backup container (data folders, dumps, named volumes).
   Config files and secrets are **not** backed up: `.env` files, `traefik/acme.json`, `git-backup/token.txt`,
@@ -18,7 +21,7 @@ Where an app has its own backup or export, that is used. Otherwise the container
 
 | Stack | Method | Restore |
 | --- | --- | --- |
-| immich | Immich's automatic database dumps (`library/backups`, daily 02:00, 14 kept) + `library` without thumbnails/transcodes. Runs while Immich is running. | Restore the dump as described in the [Immich docs](https://immich.app/docs/administration/backup-and-restore), then rerun the thumbnail and transcode jobs. |
+| immich (disabled) | Immich's automatic database dumps (`library/backups`, daily 02:00, 14 kept) + `library` without thumbnails/transcodes. Runs while Immich is running. | Restore the dump as described in the [Immich docs](https://immich.app/docs/administration/backup-and-restore), then rerun the thumbnail and transcode jobs. |
 | paperless-ngx | [`document_exporter`](https://docs.paperless-ngx.com/administration/#exporter) into `export/` right before the archive (`archive-pre` label). Runs while Paperless is running. | `document_importer ../export` on the **same Paperless version**. API tokens are not exported. |
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). | Pipe `monica.sql` into `mariadb` in a fresh db container. |

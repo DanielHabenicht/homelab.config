@@ -22,11 +22,12 @@ services:
       - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
       - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
       - ../git-backup/backup:/backup/git-backup/backup:ro
-      # Immich: originals and its own database dumps, no thumbnails/transcodes
-      - ../immich/library/backups:/backup/immich/library/backups:ro
-      - ../immich/library/library:/backup/immich/library/library:ro
-      - ../immich/library/profile:/backup/immich/library/profile:ro
-      - ../immich/library/upload:/backup/immich/library/upload:ro
+      # Immich: disabled for now (full copy of the photo library every run).
+      # To enable, uncomment and move conf.disabled/immich.env to conf.d/.
+      # - ../immich/library/backups:/backup/immich/library/backups:ro
+      # - ../immich/library/library:/backup/immich/library/library:ro
+      # - ../immich/library/profile:/backup/immich/library/profile:ro
+      # - ../immich/library/upload:/backup/immich/library/upload:ro
       - ../monica/data:/backup/monica/data:ro
       - ../monica/db-dump:/backup/monica/db-dump:ro
       - ../paperless-ngx/export:/backup/paperless-ngx/export:ro
