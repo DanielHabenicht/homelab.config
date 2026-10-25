@@ -55,8 +55,37 @@ Docker stores the SMB options when it creates the volume. After changing `SMB_*`
 
 ## Run a backup now
 
+Runs one job (here `pocketid`) once, outside the schedule:
+
 ```sh
 docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
+```
+
+## Try it out without the SMB share
+
+`compose.test.yml` writes the archives to `./test-archive` instead of the share.
+
+```sh
+cp .env.example .env            # dummy SMB_* values are fine, set AGE_PASSPHRASE
+docker compose -f docker-compose.yml -f compose.test.yml up -d
+```
+
+Then test one stack at a time:
+
+```sh
+(cd ../pocketid && docker compose up -d)    # recreate the stack so new labels/mounts apply
+docker compose restart backup               # needed if the stack folder did not exist before
+docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
+ls -l test-archive/
+age -d test-archive/pocketid-*.tar.gz.age | tar -tzv    # check the content
+```
+
+For stacks with a dump command (paperless-ngx, tandoor-recipes, monica), also check the dump folder
+(`export/`, `db-dump/`) after the run. When everything works, switch to the share:
+
+```sh
+docker compose up -d --force-recreate
+rm -r test-archive
 ```
 
 ## Restore

@@ -1,0 +1,7 @@
+# Writes archives to ./test-archive instead of the SMB share, for trying
+# out jobs while the share is not reachable:
+#   docker compose -f docker-compose.yml -f compose.test.yml up -d
+services:
+  backup:
+    volumes:
+      - ./test-archive:/archive
