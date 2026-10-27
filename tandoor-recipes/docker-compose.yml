@@ -27,6 +27,10 @@ services:
       - ${DATA_ROOT:?}/tandoor-recipes/db-dump:/db-dump
     env_file:
       - ./.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
     networks:
       - no-internet
 
@@ -37,6 +41,10 @@ services:
     env_file:
       - ./.env
     environment:
+      SECRET_KEY: ${SECRET_KEY:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: ${POSTGRES_DB:?}
       SOCIAL_PROVIDERS: "allauth.socialaccount.providers.openid_connect"
       SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "${OIDC_CLIENT_ID:?}","secret": "${OIDC_CLIENT_SECRET:?}","settings": { "server_url": "https://auth.${DOMAIN:?}/.well-known/openid-configuration"}}]}}'
       SOCIALACCOUNT_LOGIN_ON_GET: 1

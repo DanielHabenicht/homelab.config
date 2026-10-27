@@ -20,6 +20,11 @@ services:
       - ${DATA_ROOT:?}/immich/opa:/mnt/opa:ro
     env_file:
       - .env
+    environment:
+      # Secrets (SOPS), not in .env
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      DB_USERNAME: ${DB_USERNAME:?}
+      DB_DATABASE_NAME: ${DB_DATABASE_NAME:?}
     depends_on:
       - redis
       - database

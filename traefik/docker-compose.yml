@@ -34,6 +34,8 @@ services:
       # Used in dynamic.yml
       DOMAIN: ${DOMAIN:?}
       DNS_SERVER_URL: ${DNS_SERVER_URL:-}
+      # Cloudflare API token with Zone:Read and DNS:Edit for the zone
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN:?}
     ports:
       - "80:80"
       - "443:443"

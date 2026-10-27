@@ -1,12 +1,12 @@
 # Komodo Core (UI + API) with FerretDB on Postgres as database.
 # Based on https://github.com/moghtech/komodo/blob/main/compose/ferretdb.compose.yaml
 #
-# Runs on ONE machine only. It is deployed by hand (not by Komodo itself):
-#   cp .env.example .env   # fill in the secrets
-#   docker compose up -d
+# One Komodo Core per site. Deployed by hand (not by Komodo itself), with the
+# site's settings and SOPS-encrypted secrets:
+#   ./up.sh <site>
 #
-# The Periphery agent is not part of this file. Every machine (this one too)
-# runs Periphery with systemd, see ../README.md.
+# The Periphery agent is not part of this file, it runs with systemd on the
+# host so it can use sops, see ../README.md.
 
 services:
   postgres:
@@ -59,12 +59,27 @@ services:
     depends_on:
       - ferretdb
     ports:
-      # For the Periphery agent on this machine (ws://127.0.0.1:9120)
-      - 127.0.0.1:9120:9120
-    env_file: .env
+      # Periphery on this host connects to ws://127.0.0.1:9120. Also reachable
+      # in the LAN as http://<host>:9120 before Traefik is deployed.
+      - 9120:9120
     environment:
       KOMODO_HOST: https://komodo.${DOMAIN:?}
+      KOMODO_TITLE: ${KOMODO_TITLE:-Komodo}
+      TZ: Europe/Berlin
       KOMODO_DATABASE_ADDRESS: ferretdb:27017
+      KOMODO_DATABASE_USERNAME: ${KOMODO_DATABASE_USERNAME:?}
+      KOMODO_DATABASE_PASSWORD: ${KOMODO_DATABASE_PASSWORD:?}
+      # First login, change the password afterwards
+      KOMODO_LOCAL_AUTH: true
+      KOMODO_INIT_ADMIN_USERNAME: admin
+      KOMODO_INIT_ADMIN_PASSWORD: ${KOMODO_INIT_ADMIN_PASSWORD:?}
+      KOMODO_DISABLE_USER_REGISTRATION: true
+      KOMODO_ENABLE_NEW_USERS: false
+      KOMODO_WEBHOOK_SECRET: ${KOMODO_WEBHOOK_SECRET:?}
+      KOMODO_JWT_SECRET: ${KOMODO_JWT_SECRET:?}
+      KOMODO_JWT_TTL: 1-day
+      KOMODO_MONITORING_INTERVAL: 15-sec
+      KOMODO_RESOURCE_POLL_INTERVAL: 5-min
     volumes:
       # Core / Periphery communication keys
       - keys:/config/keys

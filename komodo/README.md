@@ -1,148 +1,165 @@
 # Komodo
 
-[Komodo](https://komo.do) deploys the stacks of this repository to every machine (mine, my parents', ...)
-and keeps them up to date from git.
+[Komodo](https://komo.do) deploys the stacks of this repository and keeps them up to date from git.
+Every site (my place, my parents' place, ...) runs its **own** Komodo, so the sites don't need to
+reach each other, but all of them are configured in this repository.
 
-- **Komodo Core** (web UI, API) runs once, on `home`: [`core/compose.yaml`](core/compose.yaml).
-- **Periphery** (agent) runs on every machine and connects *out* to Core, so no ports need to be opened at the other places.
-- **What runs where** is declared in [`sync/`](sync) and applied by a Resource Sync:
-  - [`sync/servers/<server>.toml`](sync/servers): the machine and its stacks, with the stack environment.
-  - [`sync/variables.toml`](sync/variables.toml): non-secret values per machine (`HOME_DOMAIN`, `HOME_DATA_ROOT`, ...).
-  - [`sync/sync.toml`](sync/sync.toml): the sync itself and the `deploy-on-push` procedure.
-- **Secrets** are secret variables in the Komodo UI (*Settings → Variables*), named `<SERVER>_<STACK>_<KEY>`,
-  e.g. `HOME_IMMICH_DB_PASSWORD`. This repository is public, so they are never in git.
+```
+komodo/
+  stacks/<stack>.toml          how a stack is deployed (shared by all sites)
+  sites/<site>/site.toml       the site: its values (DOMAIN, DATA_ROOT, ...), which stacks it runs,
+                               the Resource Sync and the deploy procedure
+  sites/<site>/core.env        non-secret settings of the site's Komodo Core
+  sites/<site>/secrets/*.env   secrets, encrypted with SOPS (one file per stack + komodo-core.env)
+  core/                        Komodo Core compose file and up.sh
+  import-env.py                turns the old per-stack .env files into secrets/*.env
+.sops.yaml                     who can decrypt which site's secrets
+```
 
-## How a deployment works
+## How it fits together
 
-Komodo clones this repository for every stack into its own folder (`/etc/komodo/stacks/<stack>`),
-writes the stack's `environment` (with `[[VARIABLES]]` filled in) to `.env` next to the compose file
-and runs `docker compose -p <project_name> up -d`.
+- **Komodo Core** (UI, database) and **Periphery** (the agent that runs `docker compose`) run on the site's Docker host.
+  Periphery runs with systemd, so it can use `sops` and the site's age key.
+- The site's **Resource Sync** reads `komodo/sites/<site>/` and the `komodo/stacks/*.toml` files listed in its
+  `resource_path` from GitHub, and creates the stacks and variables in Komodo.
+- For every stack Komodo clones this repository into its own folder (`/etc/komodo/stacks/<stack>`), writes the
+  non-secret environment from the stack TOML (`[[DOMAIN]]` etc. filled in from the site's variables) to `.env`,
+  and runs
+  `sops exec-env ../komodo/sites/<site>/secrets/<stack>.env 'docker compose ... up -d'`.
+  The secrets only exist in memory of that command, they are never written to disk.
+- Komodo may delete that folder at any time, so **no data lives there**. The compose files mount their data from
+  `${DATA_ROOT}/<stack>/...` and use `${DOMAIN}` for every host name. Both are required.
 
-Komodo may delete and re-clone that folder at any time, so **no data lives there**. Every compose
-file mounts its data from `${DATA_ROOT}/<stack>/...` instead (e.g. `/mnt/data/homelab/immich/library`),
-and the domain comes from `${DOMAIN}`. Both are required, a stack does not start without them.
+## Secrets and disaster recovery
+
+Every `secrets/*.env` is encrypted for two [age](https://age-encryption.org) keys (see [`/.sops.yaml`](../.sops.yaml)):
+
+- **admin key**: mine, kept in the password manager. Can decrypt every site.
+- **site key**: `/etc/komodo/age.key` on the site's machine. Can only decrypt that site.
+
+To rebuild a site from scratch you need: this repository, the admin key and the data backup
+([`backup/`](../backup/README.md)). Komodo's own database holds nothing that isn't in git.
+
+Edit secrets with `sops edit komodo/sites/<site>/secrets/<stack>.env` (needs one of the two keys), commit and push.
 
 ## Automatic updates
 
-| What changes | What happens |
-| --- | --- |
-| Push to `main` (compose file, `sync/*.toml`) | GitHub webhook → procedure `deploy-on-push` → applies the sync, then redeploys only the stacks whose files or environment changed. |
-| New image for a rolling tag (`latest`, `release`, ...) | `poll_for_updates` shows it in the UI. The built-in *Global Auto Update* procedure (daily) only redeploys stacks with `auto_update = true`. |
-| Pinned image versions | Not automatic. Bump them in git (e.g. with [Renovate](https://docs.renovatebot.com/)), the push redeploys. |
+Each site has a `deploy-on-push` procedure (in `site.toml`): every 15 minutes it applies the sync and redeploys
+the stacks whose compose file, environment or secrets changed. It polls GitHub, so nothing at home has to be
+reachable from the internet. (A GitHub webhook to `https://komodo.<domain>/listener/github/procedure/deploy-on-push/main`
+works too, if Komodo is reachable.)
 
-The webhook needs GitHub to reach `https://komodo.<domain>/listener/...`. If Komodo is only reachable
-at home, either expose just the `/listener` path (e.g. Cloudflare Tunnel, Tailscale Funnel) or use the
-schedule of `deploy-on-push` instead (`schedule_enabled = true` in `sync/sync.toml`, every 15 minutes).
+Images with rolling tags (`latest`, `release`) are shown as updatable (`poll_for_updates`). Pinned versions are
+bumped in git (e.g. with [Renovate](https://docs.renovatebot.com/)), the next poll deploys them.
 
-## Migrating the existing machine
+## Setting up a site
 
-Today the stacks run from the git checkout in `/mnt/data/homelab`, each with a `.env` next to it.
-That folder becomes `DATA_ROOT`: the data stays exactly where it is, only the compose files come from
-Komodo's clone afterwards. Mounts and named volumes resolve to the same paths and names as before,
-so Komodo takes over the running containers instead of starting new ones.
+Needed on the machine: Docker, [sops](https://github.com/getsops/sops/releases) (≥ 3.9) and `age`.
+The examples use `home`; for another site add `komodo/sites/<site>/` (copy `parents/`) and a rule in `.sops.yaml` first.
 
-Keep `/mnt/data/homelab` on its current commit until the migration is done (don't `git pull` there).
-Then rolling back a stack is just `cd /mnt/data/homelab/<stack> && docker compose up -d`.
-
-### 0. Before you start
-
-- **Rotate the Pocket ID client secrets** of actual-budget, gramps, tandoor-recipes and trilium.
-  They were committed to this public repository. Create new secrets in Pocket ID; they go into Komodo in step 4.
-- Make sure the last backup run worked.
-- `docker compose ls`: the project names must match `project_name` in [`sync/servers/home.toml`](sync/servers/home.toml)
-  (it is the folder name, except `unifi-network-application` for `ubiquiti`). Fix the TOML if one differs.
-
-### 1. Komodo Core
+### 1. Keys (once per site, plus the admin key once)
 
 ```sh
-git clone https://github.com/DanielHabenicht/homelab.config.git /opt/homelab
-cd /opt/homelab/komodo/core
-cp .env.example .env    # fill in the secrets (openssl rand -hex 32)
-docker compose up -d
+age-keygen -o admin.key                 # only once: store in the password manager, then delete the file
+sudo mkdir -p /etc/komodo && sudo age-keygen -o /etc/komodo/age.key && sudo chmod 600 /etc/komodo/age.key
+sudo age-keygen -y /etc/komodo/age.key  # public key of this site
 ```
 
-Open `https://komodo.home.aquiver.de`, log in with `KOMODO_INIT_ADMIN_*` and change the password.
+Put both public keys into `.sops.yaml` and push.
 
-### 2. Periphery on `home`
+### 2. Komodo Core
 
-In Komodo: *Settings → Onboarding → New onboarding key*. Then on the machine:
+```sh
+git clone https://github.com/DanielHabenicht/homelab.config.git /opt/homelab && cd /opt/homelab
+umask 077
+# Secrets of Komodo Core (only once per site, then commit the encrypted file)
+cat > komodo/sites/home/secrets/komodo-core.env <<EOF
+KOMODO_DATABASE_USERNAME=komodo
+KOMODO_DATABASE_PASSWORD=$(openssl rand -hex 24)
+KOMODO_INIT_ADMIN_PASSWORD=$(openssl rand -hex 12)
+KOMODO_WEBHOOK_SECRET=$(openssl rand -hex 32)
+KOMODO_JWT_SECRET=$(openssl rand -hex 32)
+EOF
+sops encrypt --in-place komodo/sites/home/secrets/komodo-core.env
+
+docker network inspect traefik_backbone >/dev/null 2>&1 || docker network create --internal traefik_backbone
+sudo komodo/core/up.sh home
+```
+
+Open `http://<machine>:9120` (later `https://komodo.<domain>`), log in as `admin`
+(`sops decrypt komodo/sites/home/secrets/komodo-core.env` shows the password) and change the password.
+
+### 3. Periphery
+
+In Komodo: *Settings → Onboarding → New onboarding key*. Then:
 
 ```sh
 curl -sSL https://raw.githubusercontent.com/moghtech/komodo/main/scripts/setup-periphery.py \
-  | python3 - --core-address="ws://127.0.0.1:9120" --connect-as="home" --onboarding-key="O-..."
+  | sudo python3 - --core-address="ws://127.0.0.1:9120" --connect-as="local" --onboarding-key="O-..."
 sudo systemctl enable periphery
 ```
 
-The server `home` shows up as *OK* in the UI.
+The server `local` shows up as *OK*.
 
-### 3. Resource Sync
+### 4. Resource Sync (once, afterwards it manages itself)
 
 *Syncs → New Resource Sync*, name `homelab`, mode *Git Repo*, repo `DanielHabenicht/homelab.config`,
-branch `main`, resource path `komodo/sync`, enable *Include Variables*. Save, *Refresh*, check the
-pending changes and *Execute*.
+branch `main`, resource path `komodo/sites/home`, enable *Include Variables*. Save, *Refresh*, *Execute*.
+The next execution picks up the full `resource_path` from `site.toml`, so run *Refresh* and *Execute* once more.
 
-This creates the variables, the 15 stacks `home-*` and the `deploy-on-push` procedure.
-Nothing is deployed yet. From now on the sync manages itself from [`sync/sync.toml`](sync/sync.toml).
+Now the variables, stacks and the `deploy-on-push` procedure exist.
 
-### 4. Secrets
+### 5. Secrets of the stacks
 
-Create an API key (in your user profile in Komodo), then import the existing `.env` files:
+Every stack listed in `site.toml` that has a `compose_cmd_wrapper` needs `secrets/<stack>.env`
+(the comment in `komodo/stacks/<stack>.toml` lists the keys):
 
 ```sh
-cd /opt/homelab
-export KOMODO_URL=https://komodo.home.aquiver.de KOMODO_API_KEY=K-... KOMODO_API_SECRET=S-...
-python3 komodo/import-env.py home /mnt/data/homelab            # dry run, shows what it would do
-python3 komodo/import-env.py home /mnt/data/homelab --apply
+sops edit komodo/sites/home/secrets/<stack>.env    # creates the file encrypted
 ```
 
-For every `KEY = [[HOME_..._KEY]]` in a stack environment it stores the value of `KEY` from the old
-`<stack>/.env` as secret variable. It lists what needs a manual look:
+For the existing machine `import-env.py` does that from the old `.env` files, see below.
 
-- **missing secrets**: create them in *Settings → Variables* (check *secret*). Expected:
-  the rotated `*_OIDC_CLIENT_ID` / `*_OIDC_CLIENT_SECRET` for actual-budget, gramps, tandoor-recipes and
-  trilium (and paperless-ngx if its `.env` uses other names).
-- **keys from the old `.env` that are not set anymore**: add a line to the stack's `environment` in
-  `home.toml` if the app still needs it (and the secret, if it is one), or ignore it if it moved into
-  the compose file (the script says so).
-- **values that differ**: fix the TOML.
+### 6. Deploy
 
-Push TOML changes to `main` and run the sync again.
+Deploy `traefik` first, then the rest. With `schedule_enabled = true` in `site.toml` the procedure does it
+(and keeps doing it on every change).
 
-### 5. Move the stacks, one at a time
+## Migrating the existing machine (home)
 
-For each stack, starting with something unimportant (e.g. `home-bonds`) and with `home-traefik` and
-`home-pocketid` last:
+Today the stacks run from the git checkout in `/mnt/data/homelab`, each with a `.env` next to it. That folder
+becomes `DATA_ROOT`: **the data does not move**. Komodo deploys every stack with the same compose project name
+(`project_name` in `komodo/stacks/*.toml`), the same bind mounts and the same named volumes, so it takes over the
+running containers.
 
-1. Open the stack in Komodo, check *Info* (the compose file and the `.env` it will write).
-2. *Deploy*. Compose recreates the containers of the same project with the same data.
-3. Check the app. If something is wrong: `cd /mnt/data/homelab/<stack> && docker compose up -d` brings back the old version.
+Keep `/mnt/data/homelab` on its current commit until you are done (don't `git pull` there). Then rolling back a
+stack is `cd /mnt/data/homelab/<stack> && docker compose up -d`.
 
-### 6. Switch on automatic deploys
-
-When every stack is deployed from Komodo:
-
-- GitHub → *Settings → Webhooks → Add webhook*: payload URL
-  `https://komodo.home.aquiver.de/listener/github/procedure/deploy-on-push/main`,
-  content type `application/json`, secret `KOMODO_WEBHOOK_SECRET` from `core/.env`, *Just the push event*.
-  Or set `schedule_enabled = true` in `sync/sync.toml` instead.
-- Don't do this earlier: `deploy-on-push` deploys every stack that was never deployed by Komodo.
-
-`/mnt/data/homelab` now only holds data. The git files in it are not used anymore; keep the `.env`
-files until you no longer need a rollback.
-
-## Adding another machine
-
-1. Copy [`sync/servers/parents.toml.example`](sync/servers/parents.toml.example) to `sync/servers/<name>.toml`,
-   keep the stacks you want and add `<NAME>_DOMAIN` and `<NAME>_DATA_ROOT` to `sync/variables.toml`.
-2. Create the `<NAME>_*` secrets in the UI (new random values; new Pocket ID clients if the apps use SSO).
-3. DNS: point `<domain>` and `*.<domain>` to the machine (the Cloudflare token needs access to the zone).
-4. Install Docker and Periphery on the machine, connecting to Core over the internet or a VPN like Tailscale:
+1. **Rotate the Pocket ID client secrets** of actual-budget, gramps, tandoor-recipes and trilium. They were committed
+   to this public repository.
+2. `docker compose ls`: the project names must match `project_name` in `komodo/stacks/*.toml`
+   (the folder name, `unifi-network-application` for ubiquiti).
+3. Steps 1-4 of *Setting up a site* above. `home/site.toml` has `schedule_enabled = false`, so nothing is
+   deployed automatically yet.
+4. Secrets from the old `.env` files:
    ```sh
-   curl -sSL https://raw.githubusercontent.com/moghtech/komodo/main/scripts/setup-periphery.py \
-     | python3 - --core-address="https://komodo.home.aquiver.de" --connect-as="<name>" --onboarding-key="O-..."
+   cd /opt/homelab
+   python3 komodo/import-env.py home /mnt/data/homelab            # dry run, shows which keys go where
+   python3 komodo/import-env.py home /mnt/data/homelab --write    # writes secrets/<stack>.env, encrypted
    ```
-5. Push to `main`. The sync creates the stacks, deploy them once by hand (`<name>-traefik` first),
-   afterwards pushes redeploy them automatically.
+   It lists what needs a look: empty values to fill in with `sops edit` (the rotated OIDC secrets), old keys the
+   compose files don't use anymore and values that differ from the stack TOML. Commit and push the files.
+5. Move the stacks one by one, `traefik` and `pocketid` last: open the stack in Komodo, check *Info*, *Deploy*,
+   check the app. If something is wrong, roll back as above.
+6. When everything runs from Komodo, set `schedule_enabled = true` in `komodo/sites/home/site.toml` and push.
+   (Not earlier: the procedure also deploys stacks that were never deployed by Komodo.)
 
-The compose files are shared. If a machine needs something different, use a variable with a default
-(`${VAR:-default}`) rather than copying the compose file.
+`/mnt/data/homelab` then only holds data. Delete the old `.env` files once you no longer need a rollback.
+
+## Adding a site (e.g. parents)
+
+1. Adjust `komodo/sites/parents/site.toml` (domain, data folder, which stacks) and `core.env`.
+2. DNS: `<domain>` and `*.<domain>` to the machine's IP in the local network there (Traefik gets the certificate
+   via the Cloudflare DNS challenge, nothing needs to be reachable from outside).
+3. *Setting up a site* above, with `parents` instead of `home`. New random values for its secrets, new Pocket ID
+   clients for its apps.

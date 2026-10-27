@@ -6,6 +6,7 @@ services:
     environment:
       APP_URL: https://auth.${DOMAIN:?}
       TRUST_PROXY: true
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?}
       VERSION_CHECK_DISABLED: true
       ANALYTICS_DISABLED: true
     volumes:

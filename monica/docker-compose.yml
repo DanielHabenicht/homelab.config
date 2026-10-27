@@ -13,6 +13,9 @@ services:
       - APP_ENV=production
       - APP_URL=https://monica.${DOMAIN:?}
       - DB_HOST=db
+      - DB_USERNAME=${DB_USERNAME:?}
+      - DB_PASSWORD=${DB_PASSWORD:?}
+      - APP_KEY=${APP_KEY:?}
     env_file:
       - .env
     volumes:
@@ -36,6 +39,8 @@ services:
     image: mariadb:11
     environment:
       - MYSQL_DATABASE=monica
+      - MYSQL_USER=${MYSQL_USER:?}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:?}
     env_file:
       - .env
     volumes:
