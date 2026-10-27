@@ -3,7 +3,7 @@ services:
   bonds:
     image: ghcr.io/naiba/bonds:latest
     volumes:
-      - ./bonds-data:/app/data
+      - ${DATA_ROOT:?}/bonds/bonds-data:/app/data
     environment:
       - SERVER_PORT=8080
       - DB_DRIVER=sqlite
@@ -16,13 +16,13 @@ services:
       - "docker-volume-backup.stop-during-backup=bonds"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.bonds.rule=Host(`bonds.home.aquiver.de`)"
+      - "traefik.http.routers.bonds.rule=Host(`bonds.${DOMAIN:?}`)"
       - "traefik.http.routers.bonds.service=bonds-service@docker"
       - "traefik.http.services.bonds-service.loadbalancer.server.port=8080"
       - "homepage.group=Media"
       - "homepage.name=Bonds"
       - "homepage.icon=bonds"
-      - "homepage.href=https://bonds.home.aquiver.de/"
+      - "homepage.href=https://bonds.${DOMAIN:?}/"
     networks:
       - no-internet
       - traefik_backbone

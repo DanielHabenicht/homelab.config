@@ -1,4 +1,3 @@
-version: "3.4"
 services:
   traefik:
     image: "traefik:v3.6"
@@ -7,25 +6,52 @@ services:
       - no-new-privileges:true
     env_file:
       - .env
+    # Static configuration. Passed as flags (instead of a traefik.yml) so the
+    # domain and e-mail can come from the per-machine environment.
+    command:
+      - --global.sendAnonymousUsage=false
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker.watch=true
+      - --providers.docker.exposedByDefault=false
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
+      - --log.level=DEBUG
+      - --entryPoints.web.address=:80
+      - --entryPoints.web.http.redirections.entryPoint.to=websecure
+      - --entryPoints.web.http.redirections.entryPoint.scheme=https
+      - --entryPoints.websecure.address=:443
+      - --entryPoints.websecure.asDefault=true
+      - --entryPoints.websecure.http.tls.certResolver=wildcard-godaddy
+      - --entryPoints.websecure.http.tls.domains[0].main=${DOMAIN:?}
+      - --entryPoints.websecure.http.tls.domains[0].sans=*.${DOMAIN:?}
+      # The resolver name is historical, it uses Cloudflare (CF_DNS_API_TOKEN in .env)
+      - --certificatesResolvers.wildcard-godaddy.acme.email=${ACME_EMAIL:?}
+      - --certificatesResolvers.wildcard-godaddy.acme.storage=/acme.json
+      - --certificatesResolvers.wildcard-godaddy.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.wildcard-godaddy.acme.dnsChallenge.propagation.delayBeforeChecks=0
+    environment:
+      # Used in dynamic.yml
+      DOMAIN: ${DOMAIN:?}
+      DNS_SERVER_URL: ${DNS_SERVER_URL:-}
     ports:
       - "80:80"
       - "443:443"
       # - "8001:8080"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./acme.json:/acme.json"
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - "${DATA_ROOT:?}/traefik/acme.json:/acme.json"
       - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
     networks:
       - backbone
       - internet
     # To make authentication for non internet containers work
-    hostname: auth.${SUBDOMAIN:-home}.aquiver.de
+    hostname: auth.${DOMAIN:?}
     labels:
       traefik.enable: true
 
       # Dashboard
-      traefik.http.routers.traefik.rule: Host(`traefik.${SUBDOMAIN:-home}.aquiver.de`)
+      traefik.http.routers.traefik.rule: Host(`traefik.${DOMAIN:?}`)
       traefik.http.routers.traefik.service: api@internal
       # traefik.http.routers.traefik.entrypoints: websecure
       # traefik.http.routers.traefik.tls.certresolver: wildcard-godaddy
@@ -36,4 +62,3 @@ networks:
   backbone:
    name: traefik_backbone
    external: true
-   internal: true

@@ -37,20 +37,20 @@ services:
     volumes:
       - data:/usr/src/paperless/data
       - media:/usr/src/paperless/media
-      - ./export:/usr/src/paperless/export
-      - ./consume:/usr/src/paperless/consume
+      - ${DATA_ROOT:?}/paperless-ngx/export:/usr/src/paperless/export
+      - ${DATA_ROOT:?}/paperless-ngx/consume:/usr/src/paperless/consume
     environment:
       PAPERLESS_REDIS: redis://broker:6379
       PAPERLESS_DBHOST: db
       PAPERLESS_TIKA_ENABLED: 1
       PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
       PAPERLESS_TIKA_ENDPOINT: http://tika:9998
-      PAPERLESS_URL: https://documents.${SUBDOMAIN:-home}.aquiver.de
+      PAPERLESS_URL: https://documents.${DOMAIN:?}
       PAPERLESS_CONSUMER_ENABLE_BARCODES: true # enable search for barcodes
       PAPERLESS_CONSUMER_ENABLE_ASN_BARCODE: true # enable setting ASN by ASN barcodes
       PAPERLESS_CONSUMER_BARCODE_SCANNER: ZXING # switch from pyzbar to zxing for better recognitio
       PAPERLESS_APPS: "allauth.socialaccount.providers.openid_connect"
-      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "${OIDC_CLIENT_ID}","secret": "${OIDC_CLIENT_SECRET}","settings": { "server_url": "https://auth.${SUBDOMAIN:-home}.aquiver.de/.well-known/openid-configuration"}}]}}'
+      PAPERLESS_SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "${OIDC_CLIENT_ID}","secret": "${OIDC_CLIENT_SECRET}","settings": { "server_url": "https://auth.${DOMAIN:?}/.well-known/openid-configuration"}}]}}'
       PAPERLESS_DISABLE_REGULAR_LOGIN: true
       PAPERLESS_REDIRECT_LOGIN_TO_SSO: true
     labels:
@@ -59,13 +59,13 @@ services:
       - "docker-volume-backup.archive-pre=document_exporter ../export --no-progress-bar --delete"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.paperless.rule=Host(`documents.${SUBDOMAIN:-home}.aquiver.de`)"
+      - "traefik.http.routers.paperless.rule=Host(`documents.${DOMAIN:?}`)"
       - "traefik.http.routers.paperless.service=paperless-service@docker"
       - "traefik.http.services.paperless-service.loadbalancer.server.port=8000"
       - "homepage.group=Dokumentenverwaltung"
       - "homepage.name=Paperless NGX"
       - "homepage.icon=sh-paperless-ngx"
-      - "homepage.href=https://documents.${SUBDOMAIN:-home}.aquiver.de"
+      - "homepage.href=https://documents.${DOMAIN:?}"
     networks:
       - no-internet
       - traefik_backbone
@@ -93,16 +93,16 @@ services:
     image: ghcr.io/danielhabenicht/danielhabenicht/fork.pdf-web-edit:v0.9.6
     restart: unless-stopped
     volumes:
-      - ./pdf-edit-config/:/config
-      - ./pdf-edit-inbox/:/inbox
-      - ./consume/:/outbox
-      - ./pdf-edit-archive/:/archive
+      - ${DATA_ROOT:?}/paperless-ngx/pdf-edit-config/:/config
+      - ${DATA_ROOT:?}/paperless-ngx/pdf-edit-inbox/:/inbox
+      - ${DATA_ROOT:?}/paperless-ngx/consume/:/outbox
+      - ${DATA_ROOT:?}/paperless-ngx/pdf-edit-archive/:/archive
     user: '1000:1000'
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.pdfedit.entrypoints=websecure"
-      - "traefik.http.routers.pdfedit.rule=Host(`import.${SUBDOMAIN:-home}.aquiver.de`)"
+      - "traefik.http.routers.pdfedit.rule=Host(`import.${DOMAIN:?}`)"
       - "traefik.http.routers.pdfedit.tls=true"
       - "traefik.http.routers.pdfedit.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.pdfedit.service=pdfedit-service@docker"
@@ -111,7 +111,7 @@ services:
       - "homepage.group=Documents"
       - "homepage.name=Scanner Import"
       - "homepage.icon="
-      - "homepage.href=https://import.home.aquiver.de/"
+      - "homepage.href=https://import.${DOMAIN:?}/"
     networks:
       - no-internet
       - traefik_backbone
@@ -119,11 +119,11 @@ services:
   sftp:
     image: atmoz/sftp
     volumes:
-      - ./consume:/home/paperless/upload
-      - ./keys/publickey.pub:/home/paperless/.ssh/keys/publickey.pub:ro
-      - ./keys/host/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
-      - ./keys/host/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
-      - ./keys/host/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro
+      - ${DATA_ROOT:?}/paperless-ngx/consume:/home/paperless/upload
+      - ${DATA_ROOT:?}/paperless-ngx/keys/publickey.pub:/home/paperless/.ssh/keys/publickey.pub:ro
+      - ${DATA_ROOT:?}/paperless-ngx/keys/host/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key:ro
+      - ${DATA_ROOT:?}/paperless-ngx/keys/host/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key:ro
+      - ${DATA_ROOT:?}/paperless-ngx/keys/host/ssh_host_ed25519_key.pub:/etc/ssh/ssh_host_ed25519_key.pub:ro
     ports:
       - "2222:22"
     command: paperless::1000:1000

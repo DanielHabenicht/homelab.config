@@ -1,0 +1,92 @@
+# Komodo Core (UI + API) with FerretDB on Postgres as database.
+# Based on https://github.com/moghtech/komodo/blob/main/compose/ferretdb.compose.yaml
+#
+# Runs on ONE machine only. It is deployed by hand (not by Komodo itself):
+#   cp .env.example .env   # fill in the secrets
+#   docker compose up -d
+#
+# The Periphery agent is not part of this file. Every machine (this one too)
+# runs Periphery with systemd, see ../README.md.
+
+services:
+  postgres:
+    # Pin to a specific version, updates can be breaking.
+    # https://github.com/FerretDB/documentdb/pkgs/container/postgres-documentdb
+    image: ghcr.io/ferretdb/postgres-documentdb
+    labels:
+      komodo.skip: # Prevent Komodo from stopping with StopAllContainers
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${KOMODO_DATABASE_USERNAME:?}
+      POSTGRES_PASSWORD: ${KOMODO_DATABASE_PASSWORD:?}
+      POSTGRES_DB: postgres
+    networks:
+      - no-internet
+
+  ferretdb:
+    # Pin to a specific version, updates can be breaking.
+    # https://github.com/FerretDB/FerretDB/pkgs/container/ferretdb
+    image: ghcr.io/ferretdb/ferretdb
+    labels:
+      komodo.skip:
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    volumes:
+      - ferretdb-state:/state
+    environment:
+      FERRETDB_POSTGRESQL_URL: postgres://${KOMODO_DATABASE_USERNAME}:${KOMODO_DATABASE_PASSWORD}@postgres:5432/postgres
+    networks:
+      - no-internet
+
+  core:
+    image: ghcr.io/moghtech/komodo-core:2
+    init: true
+    labels:
+      komodo.skip:
+      traefik.enable: true
+      traefik.docker.network: traefik_backbone
+      traefik.http.routers.komodo.rule: Host(`komodo.${DOMAIN:?}`)
+      traefik.http.routers.komodo.service: komodo-service@docker
+      traefik.http.services.komodo-service.loadbalancer.server.port: 9120
+      homepage.group: Administration
+      homepage.name: Komodo
+      homepage.icon: komodo
+      homepage.href: https://komodo.${DOMAIN:?}
+    restart: unless-stopped
+    depends_on:
+      - ferretdb
+    ports:
+      # For the Periphery agent on this machine (ws://127.0.0.1:9120)
+      - 127.0.0.1:9120:9120
+    env_file: .env
+    environment:
+      KOMODO_HOST: https://komodo.${DOMAIN:?}
+      KOMODO_DATABASE_ADDRESS: ferretdb:27017
+    volumes:
+      # Core / Periphery communication keys
+      - keys:/config/keys
+      # Dated database backups, see https://komo.do/docs/setup/backup
+      - ${DATA_ROOT:?}/komodo/backups:/backups
+    networks:
+      - no-internet
+      - traefik_backbone
+      # Clones the sync repo and checks registries for image updates
+      - internet
+
+volumes:
+  postgres-data:
+  ferretdb-state:
+  keys:
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true

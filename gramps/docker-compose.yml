@@ -10,11 +10,11 @@ services:
       GRAMPSWEB_CELERY_CONFIG__broker_url: "redis://grampsweb_redis:6379/0"
       GRAMPSWEB_CELERY_CONFIG__result_backend: "redis://grampsweb_redis:6379/0"
       GRAMPSWEB_RATELIMIT_STORAGE_URI: redis://grampsweb_redis:6379/1
-      GRAMPSWEB_BASE_URL: "https://gramps.home.aquiver.de"
+      GRAMPSWEB_BASE_URL: "https://gramps.${DOMAIN:?}"
       GRAMPSWEB_OIDC_ENABLED: true
-      GRAMPSWEB_OIDC_ISSUER: "https://auth.home.aquiver.de"
-      GRAMPSWEB_OIDC_CLIENT_ID: "7098db8d-1485-4000-a9ec-c4036547a792"
-      GRAMPSWEB_OIDC_CLIENT_SECRET: "g3LnNzFPWcJns34bxl1HbGAfDz4cgTig"
+      GRAMPSWEB_OIDC_ISSUER: "https://auth.${DOMAIN:?}"
+      GRAMPSWEB_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:?}
+      GRAMPSWEB_OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:?}
       GRAMPSWEB_OIDC_NAME: "Pocket ID"
       GRAMPSWEB_OIDC_AUTO_REDIRECT: true
       GRAMPSWEB_OIDC_DISABLE_LOCAL_AUTH: true
@@ -34,7 +34,7 @@ services:
       - "docker-volume-backup.stop-during-backup=gramps"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.gramps.rule=Host(`gramps.home.aquiver.de`)"
+      - "traefik.http.routers.gramps.rule=Host(`gramps.${DOMAIN:?}`)"
       - "traefik.http.routers.gramps.entrypoints=websecure"
       - "traefik.http.routers.gramps.tls=true"
       - "traefik.http.routers.gramps.tls.certresolver=wildcard-godaddy"
@@ -43,7 +43,7 @@ services:
       - "homepage.group=Apps"
       - "homepage.name=Gramps"
       - "homepage.icon=gramps"
-      - "homepage.href=https://gramps.home.aquiver.de/"
+      - "homepage.href=https://gramps.${DOMAIN:?}/"
     networks:
       - no-internet
       - traefik_backbone

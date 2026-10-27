@@ -3,8 +3,8 @@ services:
   db_recipes-init:
     image: postgres:15-alpine
     volumes:
-      - ./postgresql:/data
-      - ./db-dump:/db-dump
+      - ${DATA_ROOT:?}/tandoor-recipes/postgresql:/data
+      - ${DATA_ROOT:?}/tandoor-recipes/db-dump:/db-dump
     entrypoint:
       - sh
       - -c
@@ -23,8 +23,8 @@ services:
     image: postgres:15-alpine
     user: "1000:1000"
     volumes:
-      - ./postgresql:/var/lib/postgresql/data
-      - ./db-dump:/db-dump
+      - ${DATA_ROOT:?}/tandoor-recipes/postgresql:/var/lib/postgresql/data
+      - ${DATA_ROOT:?}/tandoor-recipes/db-dump:/db-dump
     env_file:
       - ./.env
     networks:
@@ -38,14 +38,14 @@ services:
       - ./.env
     environment:
       SOCIAL_PROVIDERS: "allauth.socialaccount.providers.openid_connect"
-      SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "10c2bd8d-d2e4-4e5d-90ab-f02e4144b91f","secret": "yOaAsuzQLGO2IowzUteSStt3hKyLxrny","settings": { "server_url": "https://auth.home.aquiver.de/.well-known/openid-configuration"}}]}}'
+      SOCIALACCOUNT_PROVIDERS: '{"openid_connect": {"APPS": [{"provider_id": "pocketid","name": "Pocket ID","client_id": "${OIDC_CLIENT_ID:?}","secret": "${OIDC_CLIENT_SECRET:?}","settings": { "server_url": "https://auth.${DOMAIN:?}/.well-known/openid-configuration"}}]}}'
       SOCIALACCOUNT_LOGIN_ON_GET: 1
-      ALLOWED_HOSTS: recipes.home.aquiver.de
+      ALLOWED_HOSTS: recipes.${DOMAIN:?}
       HIDE_LOGIN_FORM: 1
       SOCIALACCOUNT_ONLY: 1
     volumes:
       - staticfiles:/opt/recipes/staticfiles
-      - ./mediafiles:/opt/recipes/mediafiles
+      - ${DATA_ROOT:?}/tandoor-recipes/mediafiles:/opt/recipes/mediafiles
     # depends_on:
     #   - db_recipes
     networks:
@@ -57,7 +57,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.recipes.entrypoints=websecure"
-      - "traefik.http.routers.recipes.rule=Host(`recipes.home.aquiver.de`)"
+      - "traefik.http.routers.recipes.rule=Host(`recipes.${DOMAIN:?}`)"
       - "traefik.http.routers.recipes.tls=true"
       - "traefik.http.routers.recipes.tls.certresolver=wildcard-godaddy"
       - "traefik.http.routers.recipes.service=recipes-service@docker"
@@ -65,7 +65,7 @@ services:
       - "homepage.group=Apps"
       - "homepage.name=Tandoor Recipes"
       - "homepage.icon=tandoor-recipes"
-      - "homepage.href=https://recipes.home.aquiver.de/"
+      - "homepage.href=https://recipes.${DOMAIN:?}/"
 
 networks:
   no-internet:

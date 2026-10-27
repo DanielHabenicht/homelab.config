@@ -98,12 +98,12 @@ age -d -o pocketid.tar.zst pocketid-2026-10-25T03-00-00.tar.zst.age   # asks for
 tar --zstd -xf pocketid.tar.zst                                        # extracts to backup/pocketid/ (needs zstd installed)
 ```
 
-Clone this repo, copy the extracted files into the stack directory (or into the named volumes for `gramps`; a new Flask secret is generated on start)
+Copy the extracted files into `${DATA_ROOT}/<stack>/` (or into the named volumes for `gramps`; a new Flask secret is generated on start)
 and continue with the app-specific step from the table above.
 
 ## Adding a stack
 
-1. Mount only its data folders into the backup container under `/backup/<stack>/` in `docker-compose.yml`
+1. Mount only its data folders (`${DATA_ROOT}/<stack>/...`) into the backup container under `/backup/<stack>/` in `docker-compose.yml`
    (named volumes need an `external` entry using the full volume name, e.g. `gramps_gramps_db`).
 2. Copy one of the files in `conf.d/` to `conf.d/<stack>.env` and replace the name. Every file needs its own `EXEC_LABEL`,
    otherwise it would run the dump commands of all stacks.
