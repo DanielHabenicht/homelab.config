@@ -19,6 +19,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./conf.d:/etc/dockervolumebackup/conf.d:ro
       - smb-backup:/archive
+      # Archives are built and encrypted in /tmp before being copied to the
+      # share. Keep that on the big data disk instead of the system disk.
+      - ${BACKUP_TMP_DIR:-/mnt/data/backup-tmp}:/tmp
 
       # Only application data, no config files or secrets
       - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
