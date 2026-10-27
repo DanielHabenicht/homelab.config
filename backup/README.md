@@ -9,6 +9,8 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
   Immich mounts in `docker-compose.yml`.
 - Jobs with the same schedule run one after another.
+- Archives are built locally in `BACKUP_TMP_DIR` (default `/mnt/data/backup-tmp`) and then copied to the share once.
+  That folder needs free space for the largest archive.
 - Only application data is mounted into the backup container (data folders, dumps, named volumes).
   Config files and secrets are **not** backed up: `.env` files, `traefik/acme.json`, `git-backup/token.txt`,
   `homepage/config/services.yaml`, `super-productivity/webdav.yaml`, paperless `keys/` and `pdf-edit-config/`,
