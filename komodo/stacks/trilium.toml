@@ -1,0 +1,21 @@
+# Stack trilium, shared by every site that lists this file in its resource_sync.
+[[stack]]
+name = "trilium"
+description = "Notes"
+[stack.config]
+server = "local"
+repo = "DanielHabenicht/homelab.config"
+branch = "main"
+run_directory = "trilium"
+file_paths = ["docker-compose.yml"]
+# Must stay the same as before the migration (docker compose ls), otherwise
+# Docker creates new, empty named volumes
+project_name = "trilium"
+poll_for_updates = true
+# Secrets (OIDC_CLIENT_ID, OIDC_CLIENT_SECRET) from the site's SOPS file, never written to disk
+compose_cmd_wrapper = "SOPS_AGE_KEY_FILE=/etc/komodo/age.key sops exec-env ../komodo/sites/[[SITE]]/secrets/trilium.env '[[COMPOSE_COMMAND]]'"
+compose_cmd_wrapper_include = ["config", "pull", "up"]
+environment = """
+DOMAIN = [[DOMAIN]]
+DATA_ROOT = [[DATA_ROOT]]
+"""

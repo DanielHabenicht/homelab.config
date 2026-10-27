@@ -15,11 +15,16 @@ services:
     container_name: immich_server
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
     volumes:
-      - ${UPLOAD_LOCATION}:/usr/src/app/upload
+      - ${DATA_ROOT:?}/immich/library:/usr/src/app/upload
       - /etc/localtime:/etc/localtime:ro
-      - ./opa:/mnt/opa:ro
+      - ${DATA_ROOT:?}/immich/opa:/mnt/opa:ro
     env_file:
       - .env
+    environment:
+      # Secrets (SOPS), not in .env
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      DB_USERNAME: ${DB_USERNAME:?}
+      DB_DATABASE_NAME: ${DB_DATABASE_NAME:?}
     depends_on:
       - redis
       - database
@@ -27,13 +32,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.immich.rule=Host(`photos.home.aquiver.de`)"
+      - "traefik.http.routers.immich.rule=Host(`photos.${DOMAIN:?}`)"
       - "traefik.http.routers.immich.service=immich-service@docker"
       - "traefik.http.services.immich-service.loadbalancer.server.port=2283"
       - "homepage.group=Media"
       - "homepage.name=Immich"
       - "homepage.icon=immich"
-      - "homepage.href=https://photos.home.aquiver.de/"
+      - "homepage.href=https://photos.${DOMAIN:?}/"
     networks:
       - no-internet
       - traefik_backbone
@@ -71,7 +76,7 @@ services:
       # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
       # DB_STORAGE_TYPE: 'HDD'
     volumes:
-      - ${DB_DATA_LOCATION}:/var/lib/postgresql/data
+      - ${DATA_ROOT:?}/immich/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     restart: unless-stopped
     networks:

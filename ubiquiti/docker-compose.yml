@@ -17,7 +17,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js
-      - ./unifi-db:/data/db
+      - ${DATA_ROOT:?}/ubiquiti/unifi-db:/data/db
 
   unifi-network-application:
     container_name: unifi-network-application
@@ -65,4 +65,4 @@ services:
         protocol: udp
     restart: unless-stopped
     volumes:
-      - ./unifi-network-application:/config
+      - ${DATA_ROOT:?}/ubiquiti/unifi-network-application:/config

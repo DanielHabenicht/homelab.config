@@ -24,25 +24,25 @@ services:
       - ${BACKUP_TMP_DIR:-/mnt/data/backup-tmp}:/tmp
 
       # Only application data, no config files or secrets
-      - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
-      - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
-      - ../git-backup/backup:/backup/git-backup/backup:ro
+      - ${DATA_ROOT:?}/actual-budget/actual-data:/backup/actual-budget/actual-data:ro
+      - ${DATA_ROOT:?}/bonds/bonds-data:/backup/bonds/bonds-data:ro
+      - ${DATA_ROOT:?}/git-backup/backup:/backup/git-backup/backup:ro
       # Immich: disabled for now (full copy of the photo library every run).
       # To enable, uncomment and move conf.disabled/immich.env to conf.d/.
-      # - ../immich/library/backups:/backup/immich/library/backups:ro
-      # - ../immich/library/library:/backup/immich/library/library:ro
-      # - ../immich/library/profile:/backup/immich/library/profile:ro
-      # - ../immich/library/upload:/backup/immich/library/upload:ro
-      - ../monica/data:/backup/monica/data:ro
-      - ../monica/db-dump:/backup/monica/db-dump:ro
-      - ../paperless-ngx/export:/backup/paperless-ngx/export:ro
-      - ../pocketid/data:/backup/pocketid/data:ro
-      - ../super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
-      - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
-      - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
+      # - ${DATA_ROOT:?}/immich/library/backups:/backup/immich/library/backups:ro
+      # - ${DATA_ROOT:?}/immich/library/library:/backup/immich/library/library:ro
+      # - ${DATA_ROOT:?}/immich/library/profile:/backup/immich/library/profile:ro
+      # - ${DATA_ROOT:?}/immich/library/upload:/backup/immich/library/upload:ro
+      - ${DATA_ROOT:?}/monica/data:/backup/monica/data:ro
+      - ${DATA_ROOT:?}/monica/db-dump:/backup/monica/db-dump:ro
+      - ${DATA_ROOT:?}/paperless-ngx/export:/backup/paperless-ngx/export:ro
+      - ${DATA_ROOT:?}/pocketid/data:/backup/pocketid/data:ro
+      - ${DATA_ROOT:?}/super-productivity/webdav_data:/backup/super-productivity/webdav_data:ro
+      - ${DATA_ROOT:?}/tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
+      - ${DATA_ROOT:?}/tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
       # Trilium: only its own daily/weekly/monthly database copies
-      - ../trilium/trilium-data/backup:/backup/trilium/backup:ro
-      - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
+      - ${DATA_ROOT:?}/trilium/trilium-data/backup:/backup/trilium/backup:ro
+      - ${DATA_ROOT:?}/ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
 
       # Gramps uses named volumes
       - gramps_users:/backup/gramps/users:ro

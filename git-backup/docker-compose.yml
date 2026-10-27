@@ -5,9 +5,9 @@ services:
     image: buddyspencer/gickup:ubuntu-latest
     volumes:
       - ./conf.yml:/gickup/conf.yml
-      - ./token.txt:/gickup/token.txt
-      - ./gickup.log:/gickup/gickup.log
-      - ./backup:/mnt/backup
+      - ${DATA_ROOT:?}/git-backup/token.txt:/gickup/token.txt
+      - ${DATA_ROOT:?}/git-backup/gickup.log:/gickup/gickup.log
+      - ${DATA_ROOT:?}/git-backup/backup:/mnt/backup
     command: ["/gickup/conf.yml", "--debug"] # Changes the path of the internal bound config
     # Uncomment these 2 lines and set timezone appropriately to specify cron in local time instead of UTC.
     # environment:

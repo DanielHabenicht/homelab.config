@@ -11,12 +11,15 @@ services:
 #       - 8081:80
     environment:
       - APP_ENV=production
-      - APP_URL=https://monica.home.aquiver.de
+      - APP_URL=https://monica.${DOMAIN:?}
       - DB_HOST=db
+      - DB_USERNAME=${DB_USERNAME:?}
+      - DB_PASSWORD=${DB_PASSWORD:?}
+      - APP_KEY=${APP_KEY:?}
     env_file:
       - .env
     volumes:
-      - ./data:/var/www/html/storage
+      - ${DATA_ROOT:?}/monica/data:/var/www/html/storage
     restart: unless-stopped
 #    user: '1000:1000'
     networks:
@@ -25,7 +28,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
-      - "traefik.http.routers.monica.rule=Host(`monica.home.aquiver.de`)"
+      - "traefik.http.routers.monica.rule=Host(`monica.${DOMAIN:?}`)"
       - "traefik.http.routers.monica.entrypoints=websecure"
       - "traefik.http.routers.monica.tls=true"
       - "traefik.http.routers.monica.tls.certresolver=wildcard-godaddy"
@@ -36,11 +39,13 @@ services:
     image: mariadb:11
     environment:
       - MYSQL_DATABASE=monica
+      - MYSQL_USER=${MYSQL_USER:?}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:?}
     env_file:
       - .env
     volumes:
-      - ./mysql:/var/lib/mysql
-      - ./db-dump:/db-dump
+      - ${DATA_ROOT:?}/monica/mysql:/var/lib/mysql
+      - ${DATA_ROOT:?}/monica/db-dump:/db-dump
     labels:
       # Backup: dump the database to ./db-dump before archiving
       - "docker-volume-backup.exec-label=monica"

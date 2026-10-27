@@ -1,0 +1,23 @@
+# Who can decrypt which secrets (https://getsops.io).
+#
+# Every file is encrypted for:
+#   - admin: my personal age key, kept in the password manager. With it and
+#     this repository every site can be rebuilt (disaster recovery).
+#   - the site's key: /etc/komodo/age.key on that site's machine, used by
+#     Komodo to deploy. A site can only read its own secrets.
+#
+# Replace the placeholders with the public keys (age-keygen -y <keyfile>).
+# After changing keys: sops updatekeys komodo/sites/<site>/secrets/*.env
+
+keys:
+  - &admin age1replace_with_admin_public_key
+  - &home age1replace_with_home_public_key
+  - &parents age1replace_with_parents_public_key
+
+creation_rules:
+  - path_regex: komodo/sites/home/secrets/[^/]+\.env$
+    key_groups:
+      - age: [*admin, *home]
+  - path_regex: komodo/sites/parents/secrets/[^/]+\.env$
+    key_groups:
+      - age: [*admin, *parents]

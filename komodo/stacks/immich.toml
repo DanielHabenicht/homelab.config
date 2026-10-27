@@ -1,0 +1,22 @@
+# Stack immich, shared by every site that lists this file in its resource_sync.
+[[stack]]
+name = "immich"
+description = "Photos"
+[stack.config]
+server = "local"
+repo = "DanielHabenicht/homelab.config"
+branch = "main"
+run_directory = "immich"
+file_paths = ["docker-compose.yml"]
+# Must stay the same as before the migration (docker compose ls), otherwise
+# Docker creates new, empty named volumes
+project_name = "immich"
+poll_for_updates = true
+# Secrets (DB_DATABASE_NAME, DB_PASSWORD, DB_USERNAME) from the site's SOPS file, never written to disk
+compose_cmd_wrapper = "SOPS_AGE_KEY_FILE=/etc/komodo/age.key sops exec-env ../komodo/sites/[[SITE]]/secrets/immich.env '[[COMPOSE_COMMAND]]'"
+compose_cmd_wrapper_include = ["config", "pull", "up"]
+environment = """
+DOMAIN = [[DOMAIN]]
+DATA_ROOT = [[DATA_ROOT]]
+TZ = Europe/Berlin
+"""

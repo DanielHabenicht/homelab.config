@@ -1,0 +1,101 @@
+# Site "home": my place.
+#
+# The Komodo Core of this site syncs this folder (*.toml only) and the stacks
+# listed in resource_path. Secrets are in ./secrets/<stack>.env, encrypted
+# with SOPS for the admin key and this site's key (see /.sops.yaml).
+
+[[server]]
+name = "local"
+description = "This site's Docker host (Periphery with systemd, sops installed)"
+[server.config]
+enabled = true
+
+##
+
+# Non-secret values, used as [[NAME]] in the stack environments
+[[variable]]
+name = "SITE"
+description = "Name of this folder, used for the secrets path"
+value = "home"
+
+[[variable]]
+name = "DOMAIN"
+description = "Every service is a subdomain of this"
+value = "home.aquiver.de"
+
+[[variable]]
+name = "DATA_ROOT"
+description = "Application data, one folder per stack"
+value = "/mnt/data/homelab"
+
+[[variable]]
+name = "ACME_EMAIL"
+description = "Let's Encrypt account e-mail"
+value = "daniel-habenicht@outlook.de"
+
+[[variable]]
+name = "DNS_SERVER_URL"
+description = "Routed as dns.<DOMAIN>, empty to disable"
+value = "http://192.168.178.174:5380/"
+
+##
+
+[[resource_sync]]
+name = "homelab"
+description = "Site home from DanielHabenicht/homelab.config"
+[resource_sync.config]
+repo = "DanielHabenicht/homelab.config"
+branch = "main"
+# Which stacks run here: add or remove lines
+resource_path = [
+  "komodo/sites/home",
+  "komodo/stacks/traefik.toml",
+  "komodo/stacks/homepage.toml",
+  "komodo/stacks/pocketid.toml",
+  "komodo/stacks/immich.toml",
+  "komodo/stacks/actual-budget.toml",
+  "komodo/stacks/bonds.toml",
+  "komodo/stacks/git-backup.toml",
+  "komodo/stacks/gramps.toml",
+  "komodo/stacks/monica.toml",
+  "komodo/stacks/paperless-ngx.toml",
+  "komodo/stacks/super-productivity.toml",
+  "komodo/stacks/tandoor-recipes.toml",
+  "komodo/stacks/trilium.toml",
+  "komodo/stacks/ubiquiti.toml",
+  "komodo/stacks/backup.toml",
+]
+include_resources = true
+include_variables = true
+# Deleting a stack here would remove it from Komodo, not stop it. Keep it off.
+delete = false
+webhook_enabled = false
+
+##
+
+# Applies the sync, then redeploys every stack whose compose file, environment
+# or secrets changed. Unchanged stacks are left alone.
+[[procedure]]
+name = "deploy-on-push"
+description = "Apply the resource sync, then redeploy changed stacks"
+[procedure.config]
+# Polls git, so GitHub does not need to reach this site.
+# Alternatively use a GitHub webhook to .../listener/github/procedure/deploy-on-push/main
+schedule_format = "English"
+schedule = "Every 15 minutes"
+# Enable once every stack is migrated (komodo/README.md)
+schedule_enabled = false
+schedule_alert = false
+failure_alert = true
+
+[[procedure.config.stage]]
+name = "Sync resources"
+executions = [
+  { execution.type = "RunSync", execution.params.sync = "homelab" },
+]
+
+[[procedure.config.stage]]
+name = "Redeploy changed stacks"
+executions = [
+  { execution.type = "BatchDeployStackIfChanged", execution.params.pattern = "*" },
+]

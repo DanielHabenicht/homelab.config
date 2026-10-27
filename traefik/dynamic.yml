@@ -1,9 +1,11 @@
-# DNS
+# Go template, rendered by Traefik with the container environment.
+# DNS: only routed on machines that set DNS_SERVER_URL.
+{{ if env "DNS_SERVER_URL" }}
 http:
   routers:
     dns:
       # By default, routers listen to every entry points
-      rule: "Host(`dns.home.aquiver.de`)"
+      rule: "Host(`dns.{{ env "DOMAIN" }}`)"
       service: "dns"
       tls:
         certResolver: wildcard-godaddy
@@ -12,4 +14,5 @@ http:
     dns:
       loadBalancer:
         servers:
-        - url: "http://192.168.178.174:5380/"
+        - url: "{{ env "DNS_SERVER_URL" }}"
+{{ end }}

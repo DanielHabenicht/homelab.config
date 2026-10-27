@@ -1,0 +1,18 @@
+# Stack ubiquiti, shared by every site that lists this file in its resource_sync.
+[[stack]]
+name = "ubiquiti"
+description = "UniFi Network controller"
+[stack.config]
+server = "local"
+repo = "DanielHabenicht/homelab.config"
+branch = "main"
+run_directory = "ubiquiti"
+file_paths = ["docker-compose.yml"]
+# Must stay the same as before the migration (docker compose ls), otherwise
+# Docker creates new, empty named volumes
+project_name = "unifi-network-application"
+poll_for_updates = true
+environment = """
+DOMAIN = [[DOMAIN]]
+DATA_ROOT = [[DATA_ROOT]]
+"""
