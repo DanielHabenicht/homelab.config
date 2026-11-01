@@ -46,6 +46,17 @@ services:
       homepage.href: "https://travel.home.aquiver.de/"
       homepage.icon: "trek"
       homepage.name: "Trek"
+      # Sablier: only run Trek while it is used (see ../sablier/README.md).
+      # The image has its own healthcheck, Sablier waits for it.
+      sablier.enable: "true"
+      sablier.group: "trek"
+      traefik.http.middlewares.trek-sablier.plugin.sablier.sablierUrl: "http://sablier:10000"
+      traefik.http.middlewares.trek-sablier.plugin.sablier.group: "trek"
+      traefik.http.middlewares.trek-sablier.plugin.sablier.sessionDuration: "30m"
+      traefik.http.middlewares.trek-sablier.plugin.sablier.dynamic.displayName: "Trek"
+      # Keep the route while the container is stopped (Traefik v3.6+)
+      traefik.docker.allownonrunning: "true"
+      traefik.http.routers.trek.middlewares: "trek-sablier"
       traefik.docker.network: "traefik_backbone"
       traefik.enable: "true"
       traefik.http.routers.trek.rule: "Host(`travel.home.aquiver.de`)"
