@@ -42,6 +42,7 @@ services:
 
     image: "mauriceboe/trek:5.1.0"
     labels:
+      docker-volume-backup.stop-during-backup: "trek"
       homepage.group: "Media"
       homepage.href: "https://travel.home.aquiver.de/"
       homepage.icon: "trek"

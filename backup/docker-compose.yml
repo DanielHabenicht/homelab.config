@@ -42,6 +42,8 @@ services:
       - ../tandoor-recipes/db-dump:/backup/tandoor-recipes/db-dump:ro
       - ../tandoor-recipes/mediafiles:/backup/tandoor-recipes/mediafiles:ro
       # Trilium: only its own daily/weekly/monthly database copies
+      - ../trek/data:/backup/trek/data:ro
+      - ../trek/uploads:/backup/trek/uploads:ro
       - ../trilium/trilium-data/backup:/backup/trilium/backup:ro
       - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
 
