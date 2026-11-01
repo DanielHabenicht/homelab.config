@@ -1,0 +1,68 @@
+version: "3.6"
+
+networks:
+  traefik_backbone:
+    external: true
+    name: "traefik_backbone"
+  internet:
+    driver: bridge
+  no-internet:
+    driver: bridge
+    internal: true
+
+services:
+  trek:
+    cap_drop:
+      - "ALL"
+    cap_add: [CHOWN, SETUID, SETGID, KILL]
+    command:
+      - "sh"
+      - "-c"
+      - "if [ ! -f /app/server/dist/index.js ] || [ ! -d /app/node_modules/tsconfig-paths ]; then echo\
+        \ 'FATAL: TREK application files are missing from the image.'; echo 'A volume is likely mounted\
+        \ over /app, which hides the app code.'; echo 'Mount ONLY your data and uploads dirs: -v ./data:/app/data\
+        \ -v ./uploads:/app/uploads'; echo 'Do NOT mount a volume at /app. See the Troubleshooting section\
+        \ of the README.'; exit 1; fi; chown -R node:node /app/data /app/uploads 2>/dev/null || true;\
+        \ cd /app/server && exec gosu node node --require tsconfig-paths/register dist/index.js"
+    container_name: "trek"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "OIDC_DISPLAY_NAME=\"Pocket ID\""
+      - "OIDC_ONLY=true"
+      - "LOG_LEVEL=info"
+      - "APP_URL=https://travel.home.aquiver.de"
+      - "OIDC_CLIENT_ID=c1232b9a-8d82-41e1-8c35-09adce473e3a"
+      - "ALLOWED_ORIGINS="
+      - "PORT=3000"
+      - "OIDC_ISSUER=https://auth.home.aquiver.de"
+    env_file:
+      - .env
+    expose:
+      - "3000/tcp"
+
+    image: "mauriceboe/trek:5.1.0"
+    labels:
+      homepage.group: "Media"
+      homepage.href: "https://travel.home.aquiver.de/"
+      homepage.icon: "trek"
+      homepage.name: "Trek"
+      traefik.docker.network: "traefik_backbone"
+      traefik.enable: "true"
+      traefik.http.routers.trek.rule: "Host(`travel.home.aquiver.de`)"
+      traefik.http.routers.trek.service: "trek-service@docker"
+      traefik.http.services.trek-service.loadbalancer.server.port: "3000"
+
+    networks:
+      - "no-internet"
+      - "traefik_backbone"
+      - "internet"
+
+    read_only: true
+    restart: "unless-stopped"
+    security_opt:
+      - "no-new-privileges:true"
+
+    volumes:
+      - "./data:/app/data"
+      - "./uploads:/app/uploads"
+
