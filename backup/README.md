@@ -3,10 +3,8 @@
 Automated backups of all stacks with [offen/docker-volume-backup](https://offen.github.io/docker-volume-backup/),
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
-- Every file in `conf.d/` is one backup job. Each app has two, writing zstd-compressed archives like
-  `pocketid-weekly-2026-11-01T03-00-00.tar.zst.age`:
-  - `<app>-weekly.env`: Sunday at 03:00 (`Europe/Berlin`), archives older than 10 days are deleted (2 versions).
-  - `<app>-monthly.env`: 1st of the month at 04:00, archives older than 75 days are deleted (3 versions).
+- Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.zst.age`, zstd-compressed).
+- Weekly on Sunday at 03:00 (`Europe/Berlin`), archives older than 17 days are deleted (3 versions per app).
 - **Immich is disabled for now** (full copy of the photo library every run). Its job is in
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
   Immich mounts in `docker-compose.yml`.
@@ -65,7 +63,7 @@ Docker stores the SMB options when it creates the volume. After changing `SMB_*`
 Runs one job (here `pocketid`) once, outside the schedule:
 
 ```sh
-docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid-weekly.env; backup'
+docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
 ```
 
 ## Try it out without the SMB share
@@ -82,9 +80,9 @@ Then test one stack at a time:
 ```sh
 (cd ../pocketid && docker compose up -d)    # recreate the stack so new labels/mounts apply
 docker compose restart backup               # needed if the stack folder did not exist before
-docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid-weekly.env; backup'
+docker compose exec backup sh -c 'set -a; . /etc/dockervolumebackup/conf.d/pocketid.env; backup'
 ls -l test-archive/
-age -d test-archive/pocketid-weekly-*.tar.zst.age | tar --zstd -tv    # check the content
+age -d test-archive/pocketid-*.tar.zst.age | tar --zstd -tv    # check the content
 ```
 
 For stacks with a dump command (paperless-ngx, tandoor-recipes, monica), also check the dump folder
@@ -98,7 +96,7 @@ rm -r test-archive
 ## Restore
 
 ```sh
-age -d -o pocketid.tar.zst pocketid-weekly-2026-11-01T03-00-00.tar.zst.age  # asks for the passphrase
+age -d -o pocketid.tar.zst pocketid-2026-10-25T03-00-00.tar.zst.age   # asks for the passphrase
 tar --zstd -xf pocketid.tar.zst                                        # extracts to backup/pocketid/ (needs zstd installed)
 ```
 
@@ -109,8 +107,8 @@ and continue with the app-specific step from the table above.
 
 1. Mount only its data folders into the backup container under `/backup/<stack>/` in `docker-compose.yml`
    (named volumes need an `external` entry using the full volume name, e.g. `gramps_gramps_db`).
-2. Copy an existing `-weekly.env` and `-monthly.env` pair in `conf.d/` to `<stack>-weekly.env` / `<stack>-monthly.env`
-   and replace the name. Every file needs an `EXEC_LABEL`, otherwise it would run the dump commands of all stacks.
+2. Copy one of the files in `conf.d/` to `conf.d/<stack>.env` and replace the name. Every file needs its own `EXEC_LABEL`,
+   otherwise it would run the dump commands of all stacks.
 3. If the app has a dump/export command, add `docker-volume-backup.exec-label=<stack>` and
    `docker-volume-backup.archive-pre=<command>` to that container. Otherwise add
    `docker-volume-backup.stop-during-backup=<stack>` to its containers that write databases.
