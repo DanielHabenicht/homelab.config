@@ -8,11 +8,17 @@ services:
       - -retentionPeriod=100y
       - -httpAuth.username=${VM_USERNAME:?set VM_USERNAME in .env}
       - -httpAuth.password=${VM_PASSWORD:?set VM_PASSWORD in .env}
+      # InfluxDB line protocol over UDP for Proxmox VE (no auth, LAN only)
+      - -influxListenAddr=:8089
+    ports:
+      - "8089:8089/udp"
     volumes:
       - ./data:/storage
     networks:
       - traefik_backbone
       - no-internet
+      # Needed to publish the UDP port (ports do not work on internal networks)
+      - internet
     labels:
       - "docker-volume-backup.stop-during-backup=victoriametrics"
       - "traefik.enable=true"
@@ -27,7 +33,7 @@ services:
 
   # One-off import of the old InfluxDB data, see README.md:
   #   docker compose run --rm vmctl
-  vmctl:
+  vmctl: &vmctl
     image: victoriametrics/vmctl:v1.155.0
     profiles: [migrate]
     command:
@@ -35,7 +41,7 @@ services:
       - --influx-addr=${INFLUX_ADDR:-}
       - --influx-user=${INFLUX_USER:-}
       - --influx-password=${INFLUX_PASSWORD:-}
-      - --influx-database=${INFLUX_DATABASE:-homeassistant}
+      - --influx-database=homeassistant
       - --vm-addr=http://victoriametrics:8428
       - --vm-user=${VM_USERNAME:-}
       - --vm-password=${VM_PASSWORD:-}
@@ -43,6 +49,22 @@ services:
       - no-internet
       # To reach Home Assistant in the LAN
       - internet
+
+  # Proxmox writes over UDP afterwards, which has no database name.
+  # Skip the db label so old and new data end up in the same series.
+  #   docker compose run --rm vmctl-proxmox
+  vmctl-proxmox:
+    <<: *vmctl
+    command:
+      - influx
+      - --influx-addr=${INFLUX_ADDR:-}
+      - --influx-user=${INFLUX_USER:-}
+      - --influx-password=${INFLUX_PASSWORD:-}
+      - --influx-database=proxmox
+      - --influx-skip-database-label
+      - --vm-addr=http://victoriametrics:8428
+      - --vm-user=${VM_USERNAME:-}
+      - --vm-password=${VM_PASSWORD:-}
 
 networks:
   no-internet:

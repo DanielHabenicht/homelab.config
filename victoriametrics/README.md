@@ -56,6 +56,7 @@ docker compose run --rm vmctl
 
 vmctl lists the found series and asks for confirmation, then imports everything with a progress bar.
 For ~3 GB expect somewhere between 30 minutes and a few hours (depends mostly on the Home Assistant hardware).
+It only copies the `homeassistant` database (retention policy `autogen`), Proxmox follows in step 3.
 If it gets interrupted, just run it again: the same samples are deduplicated.
 
 Naming in VictoriaMetrics: `<measurement>_<field>` with the InfluxDB tags as labels, e.g.
@@ -65,7 +66,20 @@ Live writes from Home Assistant use the same naming, so old and new data are one
 Only numbers are stored. Text states and the `*_str` attribute fields are skipped (on/off etc. are already
 written as 0/1 by Home Assistant).
 
-### 3. Check and remove the add-on
+### 3. Proxmox VE
+
+The add-on also has a `proxmox` database (Proxmox *Datacenter → Metric Server*). Proxmox' HTTP mode
+authenticates with a token, which VictoriaMetrics does not support, so it writes over UDP instead
+(port `8089/udp` on the Docker host, LAN only, no auth).
+
+1. In Proxmox: *Datacenter → Metric Server*, edit the InfluxDB entry (or remove it and add a new one):
+   protocol `UDP`, server = IP of the Docker host, port `8089`.
+2. Copy the history: `docker compose run --rm vmctl-proxmox`
+
+These series have no `db` label (UDP has no database name), the import skips it as well.
+Grafana dashboards for Proxmox that use InfluxQL have to be rebuilt with PromQL/MetricsQL.
+
+### 4. Check and remove the add-on
 
 1. Compare a few sensors in vmui with the add-on (e.g. the oldest data point and a sum over a year).
 2. Optionally keep one last Home Assistant backup that contains the add-on.
