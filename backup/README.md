@@ -4,7 +4,7 @@ Automated backups of all stacks with [offen/docker-volume-backup](https://offen.
 written to an SMB share and encrypted with [age](https://age-encryption.org/).
 
 - Every file in `conf.d/` is one backup job (one archive per stack, e.g. `pocketid-2026-10-25T03-00-00.tar.zst.age`, zstd-compressed).
-- Daily at 03:00 (`Europe/Berlin`), archives older than 14 days are deleted.
+- Weekly on Sunday at 03:00 (`Europe/Berlin`), archives older than 56 days are deleted (8 versions per app).
 - **Immich is disabled for now** (full copy of the photo library every run). Its job is in
   `conf.disabled/immich.env` (weekly, keeps 28 days); to enable it, move that file to `conf.d/` and uncomment the
   Immich mounts in `docker-compose.yml`.
