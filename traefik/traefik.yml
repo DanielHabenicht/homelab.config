@@ -15,6 +15,14 @@ providers:
 log:
   level: DEBUG
 
+# Sablier: start rarely used containers on demand, see ../sablier/README.md
+# The plugin is downloaded from GitHub when Traefik starts.
+experimental:
+  plugins:
+    sablier:
+      moduleName: "github.com/sablierapp/sablier-traefik-plugin"
+      version: "v1.4.0"
+
 entryPoints:
   web:
     address: ":80"

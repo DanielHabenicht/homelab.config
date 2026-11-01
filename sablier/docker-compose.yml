@@ -1,0 +1,29 @@
+# Sablier: starts containers on demand and stops them again when idle.
+# Traefik asks Sablier (via the sablier plugin middleware) to wake a group
+# of containers when a request comes in, see README.md.
+
+services:
+  sablier:
+    image: sablierapp/sablier:1.19.1
+    container_name: sablier
+    restart: unless-stopped
+    command:
+      - start
+      - --provider.name=docker
+      # Stop all sablier.enable=true containers that have no active session
+      # when Sablier starts (e.g. after a reboot)
+      - --provider.auto-stop-on-startup=true
+      - --sessions.default-duration=30m
+      - --strategy.dynamic.default-theme=ghost
+      - --strategy.dynamic.default-refresh-frequency=3s
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Traefik reaches Sablier at http://sablier:10000 over the backbone.
+    # Sablier itself only talks to the Docker socket, no internet needed.
+    networks:
+      - traefik_backbone
+
+networks:
+  traefik_backbone:
+    name: traefik_backbone
+    external: true

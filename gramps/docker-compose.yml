@@ -21,6 +21,13 @@ services:
       GUNICORN_NUM_WORKERS: 4
     depends_on:
       - grampsweb_redis
+    # Sablier waits for "healthy" before sending the user on to the app
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/', timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 3
+      start_period: 60s
     volumes:
       - gramps_users:/app/users  # persist user database
       - gramps_index:/app/indexdir  # persist search index
@@ -32,9 +39,19 @@ services:
       - gramps_tmp:/tmp
     labels:
       - "docker-volume-backup.stop-during-backup=gramps"
+      # Sablier: only run Gramps while it is used (see ../sablier/README.md)
+      - "sablier.enable=true"
+      - "sablier.group=gramps"
+      - "traefik.http.middlewares.gramps-sablier.plugin.sablier.sablierUrl=http://sablier:10000"
+      - "traefik.http.middlewares.gramps-sablier.plugin.sablier.group=gramps"
+      - "traefik.http.middlewares.gramps-sablier.plugin.sablier.sessionDuration=30m"
+      - "traefik.http.middlewares.gramps-sablier.plugin.sablier.dynamic.displayName=Gramps"
+      # Keep the route while the container is stopped (Traefik v3.6+)
+      - "traefik.docker.allownonrunning=true"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.gramps.rule=Host(`gramps.home.aquiver.de`)"
+      - "traefik.http.routers.gramps.middlewares=gramps-sablier"
       - "traefik.http.routers.gramps.entrypoints=websecure"
       - "traefik.http.routers.gramps.tls=true"
       - "traefik.http.routers.gramps.tls.certresolver=wildcard-godaddy"
@@ -56,13 +73,21 @@ services:
       - grampsweb
       - grampsweb_redis
     command: celery -A gramps_webapi.celery worker --loglevel=INFO --concurrency=2
+    healthcheck:
+      disable: true
     labels:
       - "docker-volume-backup.stop-during-backup=gramps"
+      - "sablier.enable=true"
+      - "sablier.group=gramps"
 
   grampsweb_redis:
     image: redis:alpine
     container_name: grampsweb_redis
-    restart: always
+    # unless-stopped, so Docker doesn't restart it after Sablier stopped it
+    restart: unless-stopped
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=gramps"
     networks:
       - no-internet
       - traefik_backbone
