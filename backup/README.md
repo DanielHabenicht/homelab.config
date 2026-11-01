@@ -30,6 +30,7 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
 | actual-budget, bonds, gramps, pocketid | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
 | trilium | Only Trilium's own database copies in `trilium-data/backup` (daily, weekly, monthly; up to a day old). Runs while Trilium is running. | Copy the wanted `backup-*.db` to `document.db` while Trilium is stopped, or use *Restore from backup* ([docs](https://docs.triliumnotes.org/user-guide/setup/backup)). |
+| victoriametrics | Stopped for a few seconds and `data/` copied (Home Assistant retries the failed writes, see `max_retries` in `victoriametrics/README.md`). | Copy `data/` back while VictoriaMetrics is stopped. |
 | super-productivity | WebDAV server stopped and its files copied. | Copy the files back. |
 | git-backup | The mirrored repositories, copied while running. | Copy the files back. |
 

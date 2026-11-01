@@ -1,0 +1,55 @@
+services:
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.155.0
+    restart: unless-stopped
+    command:
+      - -storageDataPath=/storage
+      # The default is only 1 month! Keep everything (the migrated history too).
+      - -retentionPeriod=100y
+      - -httpAuth.username=${VM_USERNAME:?set VM_USERNAME in .env}
+      - -httpAuth.password=${VM_PASSWORD:?set VM_PASSWORD in .env}
+    volumes:
+      - ./data:/storage
+    networks:
+      - traefik_backbone
+      - no-internet
+    labels:
+      - "docker-volume-backup.stop-during-backup=victoriametrics"
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.victoriametrics.rule=Host(`metrics.${SUBDOMAIN:-home}.aquiver.de`)"
+      - "traefik.http.routers.victoriametrics.service=victoriametrics-service@docker"
+      - "traefik.http.services.victoriametrics-service.loadbalancer.server.port=8428"
+      - "homepage.group=Apps"
+      - "homepage.name=VictoriaMetrics"
+      - "homepage.icon=victoriametrics"
+      - "homepage.href=https://metrics.${SUBDOMAIN:-home}.aquiver.de/vmui/"
+
+  # One-off import of the old InfluxDB data, see README.md:
+  #   docker compose run --rm vmctl
+  vmctl:
+    image: victoriametrics/vmctl:v1.155.0
+    profiles: [migrate]
+    command:
+      - influx
+      - --influx-addr=${INFLUX_ADDR:-}
+      - --influx-user=${INFLUX_USER:-}
+      - --influx-password=${INFLUX_PASSWORD:-}
+      - --influx-database=${INFLUX_DATABASE:-homeassistant}
+      - --vm-addr=http://victoriametrics:8428
+      - --vm-user=${VM_USERNAME:-}
+      - --vm-password=${VM_PASSWORD:-}
+    networks:
+      - no-internet
+      # To reach Home Assistant in the LAN
+      - internet
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true

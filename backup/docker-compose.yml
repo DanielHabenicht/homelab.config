@@ -44,6 +44,7 @@ services:
       # Trilium: only its own daily/weekly/monthly database copies
       - ../trilium/trilium-data/backup:/backup/trilium/backup:ro
       - ../ubiquiti/unifi-network-application/data/backup/autobackup:/backup/ubiquiti/autobackup:ro
+      - ../victoriametrics/data:/backup/victoriametrics/data:ro
 
       # Gramps uses named volumes
       - gramps_users:/backup/gramps/users:ro

@@ -10,6 +10,7 @@ Hopefully more secure by not allowing the services to access the internet.
 ## Services
 
 - [Traefik](https://traefik.io/)
+- [VictoriaMetrics](victoriametrics/README.md): Home Assistant history (replaces the InfluxDB add-on)
 
 TODO:
 
