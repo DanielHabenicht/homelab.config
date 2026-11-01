@@ -19,6 +19,7 @@ services:
       # Backup: dump the database to ./db-dump before archiving
       - "docker-volume-backup.exec-label=tandoor-recipes"
       - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U \"$$POSTGRES_USER\" > /db-dump/tandoor.sql'"
+      # Not managed by Sablier: the backup runs pg_dumpall in here
     restart: always
     image: postgres:15-alpine
     user: "1000:1000"
@@ -32,7 +33,7 @@ services:
 
 
   web_recipes:
-    restart: always
+    restart: unless-stopped
     image: vabene1111/recipes
     env_file:
       - ./.env
@@ -48,12 +49,30 @@ services:
       - ./mediafiles:/opt/recipes/mediafiles
     # depends_on:
     #   - db_recipes
+    # Sablier waits for "healthy" before sending the user on to the app.
+    # Any HTTP answer below 500 counts, Django only accepts the real host name.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request as u, urllib.error as e\ntry: u.urlopen(u.Request('http://localhost:80/', headers={'Host': 'recipes.home.aquiver.de'}), timeout=5)\nexcept e.HTTPError as x: exit(x.code >= 500)"]
+      interval: 10s
+      timeout: 6s
+      retries: 3
+      start_period: 120s
     networks:
       - no-internet
       - internet
       - traefik_backbone
 
     labels: # traefik example labels
+      # Sablier: only run Tandoor while it is used (see ../sablier/README.md)
+      - "sablier.enable=true"
+      - "sablier.group=tandoor"
+      - "traefik.http.middlewares.recipes-sablier.plugin.sablier.sablierUrl=http://sablier:10000"
+      - "traefik.http.middlewares.recipes-sablier.plugin.sablier.group=tandoor"
+      - "traefik.http.middlewares.recipes-sablier.plugin.sablier.sessionDuration=30m"
+      - "traefik.http.middlewares.recipes-sablier.plugin.sablier.dynamic.displayName=Tandoor Recipes"
+      # Keep the route while the container is stopped (Traefik v3.6+)
+      - "traefik.docker.allownonrunning=true"
+      - "traefik.http.routers.recipes.middlewares=recipes-sablier"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.recipes.entrypoints=websecure"

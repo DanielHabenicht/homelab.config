@@ -18,11 +18,28 @@ services:
     volumes:
       - ./data:/var/www/html/storage
     restart: unless-stopped
+    # Sablier waits for "healthy" before sending the user on to the app
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://localhost/') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 6s
+      retries: 3
+      start_period: 120s
 #    user: '1000:1000'
     networks:
       - default
       - traefik_backbone
     labels:
+      # Sablier: only run Monica while it is used (see ../sablier/README.md)
+      - "sablier.enable=true"
+      - "sablier.group=monica"
+      - "traefik.http.middlewares.monica-sablier.plugin.sablier.sablierUrl=http://sablier:10000"
+      - "traefik.http.middlewares.monica-sablier.plugin.sablier.group=monica"
+      - "traefik.http.middlewares.monica-sablier.plugin.sablier.sessionDuration=30m"
+      - "traefik.http.middlewares.monica-sablier.plugin.sablier.dynamic.displayName=Monica"
+      # Keep the route while the container is stopped (Traefik v3.6+)
+      - "traefik.docker.allownonrunning=true"
+      - "traefik.http.routers.monica.middlewares=monica-sablier"
       - "traefik.enable=true"
       - "traefik.docker.network=traefik_backbone"
       - "traefik.http.routers.monica.rule=Host(`monica.home.aquiver.de`)"
@@ -45,6 +62,7 @@ services:
       # Backup: dump the database to ./db-dump before archiving
       - "docker-volume-backup.exec-label=monica"
       - "docker-volume-backup.archive-pre=/bin/sh -c 'mariadb-dump --single-transaction --no-tablespaces -u\"$$MYSQL_USER\" -p\"$$MYSQL_PASSWORD\" \"$$MYSQL_DATABASE\" > /db-dump/monica.sql'"
+      # Not managed by Sablier: the backup runs mariadb-dump in here
     restart: unless-stopped
     networks:
       - default
