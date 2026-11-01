@@ -8,9 +8,10 @@ services:
     environment:
       TZ: Europe/Berlin
       # Defaults for every file in ./conf.d (a file can override them)
-      # Weekly on Sunday at 03:00, keeping the last 8 weeks
+      # Weekly jobs: Sunday at 03:00, 2 versions kept. The monthly jobs
+      # override both in their conf.d files.
       BACKUP_CRON_EXPRESSION: "0 3 * * 0"
-      BACKUP_RETENTION_DAYS: "56"
+      BACKUP_RETENTION_DAYS: "10"
       BACKUP_PRUNING_LEEWAY: "10m"
       # zstd is much faster than the default gzip at a similar size
       BACKUP_COMPRESSION: "zst"
