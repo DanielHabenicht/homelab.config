@@ -1,0 +1,102 @@
+# Endurain: self-hosted fitness tracker (Garmin Connect sync, .fit/.tcx/.gpx
+# import, health data). See README.md for setup and importing old data.
+services:
+  # The app and Postgres run as UID 1000, the bind mounts must belong to it
+  endurain-init:
+    image: postgres:18-alpine
+    volumes:
+      - ./data:/data
+      - ./logs:/logs
+      - ./postgres:/postgres
+      - ./db-dump:/db-dump
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /data /logs /postgres /db-dump"]
+    network_mode: none
+
+  endurain-db:
+    image: postgres:18-alpine
+    container_name: endurain-db
+    depends_on:
+      endurain-init:
+        condition: service_completed_successfully
+    user: "1000:1000"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: endurain
+      POSTGRES_USER: endurain
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U endurain"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    labels:
+      # Backup: dump the database to ./db-dump before archiving
+      - "docker-volume-backup.exec-label=endurain"
+      - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U \"$$POSTGRES_USER\" > /db-dump/endurain.sql'"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+      - ./db-dump:/db-dump
+    networks:
+      - no-internet
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+
+  endurain:
+    image: ghcr.io/endurain-project/endurain:v0.20.2
+    container_name: endurain
+    depends_on:
+      endurain-db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TZ: Europe/Berlin
+      ENDURAIN_HOST: https://fitness.home.aquiver.de
+      DB_HOST: endurain-db
+      DB_USER: endurain
+      DB_DATABASE: endurain
+      BEHIND_PROXY: "true"
+      TRUSTED_PROXIES: traefik
+      # auth.home.aquiver.de resolves to Traefik's internal address, Endurain
+      # refuses OIDC discovery to private addresses unless allowed here
+      SSRF_ALLOWED_HOSTS: auth.home.aquiver.de
+    # The image has its own healthcheck (/api/v1/about)
+    volumes:
+      # Activity files, images and the bulk import folders
+      - ./data:/app/backend/data
+      - ./logs:/app/backend/logs
+    expose:
+      - "8080/tcp"
+    networks:
+      - no-internet
+      # Garmin Connect sync, reverse geocoding (Nominatim)
+      - internet
+      - traefik_backbone
+    labels:
+      # Not managed by Sablier: Garmin Connect is synced in the background
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.endurain.rule=Host(`fitness.home.aquiver.de`)"
+      - "traefik.http.routers.endurain.service=endurain-service@docker"
+      - "traefik.http.services.endurain-service.loadbalancer.server.port=8080"
+      - "homepage.group=Apps"
+      - "homepage.name=Endurain"
+      - "homepage.icon=endurain"
+      - "homepage.href=https://fitness.home.aquiver.de/"
+    cap_drop:
+      - "ALL"
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true

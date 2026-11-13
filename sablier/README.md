@@ -57,4 +57,4 @@ Use `restart: unless-stopped` (not `always`), so Docker does not bring the
 containers back after a daemon restart.
 
 Don't put stacks on demand that do background work on their own (Immich
-jobs, Paperless consumer, Dawarich imports), they only run while awake.
+jobs, Paperless consumer, Dawarich imports, Endurain's Garmin sync), they only run while awake.

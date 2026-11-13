@@ -27,6 +27,8 @@ services:
       # Only application data, no config files or secrets
       - ../actual-budget/actual-data:/backup/actual-budget/actual-data:ro
       - ../bonds/bonds-data:/backup/bonds/bonds-data:ro
+      - ../endurain/data:/backup/endurain/data:ro
+      - ../endurain/db-dump:/backup/endurain/db-dump:ro
       - ../git-backup/backup:/backup/git-backup/backup:ro
       # Immich: disabled for now (full copy of the photo library every run).
       # To enable, uncomment and move conf.disabled/immich.env to conf.d/.
