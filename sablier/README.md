@@ -6,7 +6,7 @@ while the containers boot, and Sablier stops them again after the session
 expires (no request for `sessionDuration`).
 
 Currently on demand: **Gramps**, **Tandoor** (web only), **Monica** (app only)
-and **Trek**. Immich and everything else stays always on.
+and **Trek**. Immich, Dawarich and everything else stays always on.
 
 The Tandoor and Monica databases stay always on, because the backup job runs
 `pg_dumpall` / `mariadb-dump` inside them and would fail if they were

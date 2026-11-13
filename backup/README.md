@@ -13,7 +13,7 @@ written to an SMB share and encrypted with [age](https://age-encryption.org/).
   That folder needs free space for the largest archive.
 - Only application data is mounted into the backup container (data folders, dumps, named volumes).
   Config files and secrets are **not** backed up: `.env` files, `traefik/acme.json`, `git-backup/token.txt`,
-  `homepage/config/services.yaml`, `super-productivity/webdav.yaml`, paperless `keys/` and `pdf-edit-config/`,
+  `homepage/config/services.yaml`, `super-productivity/webdav.yaml`, `dawarich/.env` (`SECRET_KEY_BASE`), paperless `keys/` and `pdf-edit-config/`,
   the gramps secret volume. Keep what you need for a restore (e.g. Monica's `APP_KEY`) somewhere else.
 
 ## How each app is backed up
@@ -26,6 +26,7 @@ Where an app has its own backup or export, that is used. Otherwise the container
 | immich (disabled) | Immich's automatic database dumps (`library/backups`, daily 02:00, 14 kept) + `library` without thumbnails/transcodes. Runs while Immich is running. | Restore the dump as described in the [Immich docs](https://immich.app/docs/administration/backup-and-restore), then rerun the thumbnail and transcode jobs. |
 | paperless-ngx | [`document_exporter`](https://docs.paperless-ngx.com/administration/#exporter) into `export/` right before the archive (`archive-pre` label). Runs while Paperless is running. | `document_importer ../export` on the **same Paperless version**. API tokens are not exported. |
 | tandoor-recipes | `pg_dumpall` into `db-dump/tandoor.sql` as in the [Tandoor docs](https://docs.tandoor.dev/system/backup/) + `mediafiles/`. | Pipe `tandoor.sql` into `psql` in a fresh db container. |
+| dawarich | `pg_dumpall` into `db-dump/dawarich.sql` + `storage/` (imports, exports). | Pipe `dawarich.sql` into `psql` in a fresh db container (see `../dawarich/README.md`). |
 | monica | `mariadb-dump` into `db-dump/monica.sql` + `data/` (uploads). | Pipe `monica.sql` into `mariadb` in a fresh db container. |
 | ubiquiti | Only the controller's own autobackups (`.unf` files). Enable them under *Settings → System → Backups* (e.g. daily). | Choose *Restore from backup* in the setup wizard of a fresh controller. |
 | actual-budget, bonds, gramps, pocketid, trek | SQLite databases, no usable backup command (see below): stopped for a few seconds and copied. | Copy the files back. |
@@ -88,7 +89,7 @@ ls -l test-archive/
 age -d test-archive/pocketid-*.tar.zst.age | tar --zstd -tv    # check the content
 ```
 
-For stacks with a dump command (paperless-ngx, tandoor-recipes, monica), also check the dump folder
+For stacks with a dump command (paperless-ngx, tandoor-recipes, monica, dawarich), also check the dump folder
 (`export/`, `db-dump/`) after the run. When everything works, switch to the share:
 
 ```sh

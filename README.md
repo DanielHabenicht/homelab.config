@@ -10,6 +10,7 @@ Hopefully more secure by not allowing the services to access the internet.
 ## Services
 
 - [Traefik](https://traefik.io/)
+- [Dawarich](https://dawarich.app/) (location history, `dawarich/`)
 
 TODO:
 

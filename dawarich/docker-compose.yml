@@ -1,0 +1,150 @@
+# Dawarich: self-hosted location history (Google Timeline alternative)
+# Based on https://github.com/Freika/dawarich/blob/1.22.0/docker/docker-compose.yml
+# All environment variables: https://dawarich.app/docs/self-hosting/environment-variables/
+
+name: dawarich
+
+services:
+  dawarich_redis:
+    image: docker.io/library/redis:8-alpine
+    container_name: dawarich_redis
+    # Only cache and job queue, no need to persist it to disk
+    command: redis-server --save "" --appendonly no
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    networks:
+      - no-internet
+
+  dawarich_db:
+    image: docker.io/postgis/postgis:17-3.5-alpine
+    container_name: dawarich_db
+    shm_size: 1G
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dawarich
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: dawarich
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+      - ./db-dump:/db-dump
+    labels:
+      # Backup: dump the database to ./db-dump before archiving
+      - "docker-volume-backup.exec-label=dawarich"
+      - "docker-volume-backup.archive-pre=/bin/sh -c 'pg_dumpall -U \"$$POSTGRES_USER\" > /db-dump/dawarich.sql'"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dawarich -d dawarich"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    networks:
+      - no-internet
+
+  dawarich_app:
+    image: docker.io/freikin/dawarich:1.22.0
+    container_name: dawarich_app
+    entrypoint: web-entrypoint.sh
+    command: ["bin/rails", "server", "-p", "3000", "-b", "::"]
+    restart: unless-stopped
+    stop_grace_period: 60s
+    env_file:
+      - .env
+    environment:
+      RAILS_ENV: production
+      TIME_ZONE: Europe/Berlin
+      REDIS_URL: redis://dawarich_redis:6379
+      DATABASE_HOST: dawarich_db
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: dawarich
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      DATABASE_NAME: dawarich
+      APPLICATION_HOSTS: timeline.home.aquiver.de
+      APPLICATION_URL: https://timeline.home.aquiver.de
+      # TLS ends at Traefik. "https" here would make Rails redirect the
+      # plain-http healthcheck.
+      APPLICATION_PROTOCOL: http
+      SELF_HOSTED: "true"
+      STORE_GEODATA: "true"
+      # Sidekiq runs inside the web container (background jobs, imports)
+      SIDEKIQ_EMBEDDED: "true"
+      WEB_CONCURRENCY: "0"
+      BACKGROUND_PROCESSING_CONCURRENCY: "2"
+      PROMETHEUS_EXPORTER_ENABLED: "false"
+      RAILS_LOG_TO_STDOUT: "true"
+      # Login with Pocket ID (client id/secret in .env)
+      OIDC_ISSUER: https://auth.home.aquiver.de
+      OIDC_PROVIDER_NAME: Pocket ID
+      OIDC_AUTO_REGISTER: "false"
+      ALLOW_EMAIL_PASSWORD_REGISTRATION: "false"
+      # Reverse geocoding (place names for visits) is off: it would send
+      # every location to a third party. To enable it, use e.g. photon.komoot.io
+      # or run your own Photon instance:
+      # PHOTON_API_HOST: photon.komoot.io
+      # PHOTON_API_USE_HTTPS: "true"
+    volumes:
+      # Assets are copied from the image on every start
+      - public:/var/app/public
+      # Imports, exports and other uploaded files
+      - ./storage:/var/app/storage
+      # Drop files into watched/<your e-mail>/ to import them automatically
+      - ./watched:/var/app/tmp/imports/watched
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO - http://127.0.0.1:3000/api/v1/health | grep -q '\"status\"\\s*:\\s*\"ok\"'"]
+      interval: 10s
+      retries: 30
+      start_period: 30s
+      timeout: 10s
+    depends_on:
+      dawarich_db:
+        condition: service_healthy
+        restart: true
+      dawarich_redis:
+        condition: service_healthy
+        restart: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 4G
+    security_opt:
+      - "no-new-privileges:true"
+    # Not on demand with Sablier: phones send points all the time and the
+    # background jobs (imports, visits, stats) only run while it is up.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.dawarich.rule=Host(`timeline.home.aquiver.de`)"
+      - "traefik.http.routers.dawarich.service=dawarich-service@docker"
+      - "traefik.http.services.dawarich-service.loadbalancer.server.port=3000"
+      - "homepage.group=Apps"
+      - "homepage.name=Dawarich"
+      - "homepage.icon=dawarich"
+      - "homepage.href=https://timeline.home.aquiver.de/"
+    networks:
+      - no-internet
+      - traefik_backbone
+      # OIDC discovery at auth.home.aquiver.de (and reverse geocoding, if enabled)
+      - internet
+
+volumes:
+  public:
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
