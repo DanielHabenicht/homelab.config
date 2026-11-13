@@ -1,0 +1,134 @@
+# garmin-grafana: Garmin Connect health data (sleep, HRV, resting HR, stress,
+# Body Battery, VO2max, activities) in InfluxDB, long-term dashboards in
+# Grafana. See README.md for the first Garmin login and pulling old data.
+services:
+  # Bind mounts must belong to the users the containers run as
+  garmin-grafana-init:
+    image: alpine:3.22
+    volumes:
+      - ./garminconnect-tokens:/tokens
+      - ./influxdb:/influxdb
+      - ./grafana:/grafana
+    entrypoint: ["sh", "-c", "chown -R 1000:1000 /tokens && chown -R 1500:1500 /influxdb && chown -R 472:472 /grafana"]
+    network_mode: none
+
+  garmin-fetch-data:
+    image: thisisarpanghosh/garmin-fetch-data:v0.5.0
+    container_name: garmin-fetch-data
+    depends_on:
+      garmin-grafana-init:
+        condition: service_completed_successfully
+      influxdb:
+        condition: service_started
+    environment:
+      INFLUXDB_HOST: influxdb
+      INFLUXDB_PORT: "8086"
+      INFLUXDB_USERNAME: influxdb_user
+      INFLUXDB_PASSWORD: ${INFLUXDB_PASSWORD:?set INFLUXDB_PASSWORD in .env}
+      INFLUXDB_DATABASE: GarminStats
+      GARMINCONNECT_IS_CN: "False"
+      USER_TIMEZONE: Europe/Berlin
+    volumes:
+      # OAuth tokens from the first (interactive) login, valid for about a year
+      - ./garminconnect-tokens:/home/appuser/.garminconnect
+    networks:
+      - no-internet
+      # Garmin Connect
+      - internet
+    cap_drop:
+      - "ALL"
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+
+  influxdb:
+    image: influxdb:1.11
+    container_name: garmin-influxdb
+    hostname: influxdb
+    depends_on:
+      garmin-grafana-init:
+        condition: service_completed_successfully
+    environment:
+      INFLUXDB_DB: GarminStats
+      INFLUXDB_USER: influxdb_user
+      INFLUXDB_USER_PASSWORD: ${INFLUXDB_PASSWORD:?set INFLUXDB_PASSWORD in .env}
+      INFLUXDB_DATA_INDEX_VERSION: tsi1
+      INFLUXDB_REPORTING_DISABLED: "true"
+    labels:
+      - "docker-volume-backup.stop-during-backup=garmin-grafana"
+    volumes:
+      - ./influxdb:/var/lib/influxdb
+    networks:
+      - no-internet
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+
+  grafana:
+    image: grafana/grafana:13.2.6
+    container_name: garmin-grafana
+    depends_on:
+      garmin-grafana-init:
+        condition: service_completed_successfully
+    environment:
+      INFLUXDB_PASSWORD: ${INFLUXDB_PASSWORD:?set INFLUXDB_PASSWORD in .env}
+      GF_SERVER_ROOT_URL: https://garmin.home.aquiver.de
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_USERS_DEFAULT_THEME: system
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/Garmin-Grafana-Dashboard.json
+      # Needed by the heatmap panels, downloaded on the first start
+      GF_PLUGINS_PREINSTALL: marcusolsson-hourly-heatmap-panel
+      # Login with Pocket ID, the local admin stays reachable at
+      # /login?disableAutoLogin=true
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: Pocket ID
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: ${GRAFANA_OIDC_CLIENT_ID:?set GRAFANA_OIDC_CLIENT_ID in .env}
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OIDC_CLIENT_SECRET:?set GRAFANA_OIDC_CLIENT_SECRET in .env}
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid email profile
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: https://auth.home.aquiver.de/authorize
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: https://auth.home.aquiver.de/api/oidc/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: https://auth.home.aquiver.de/api/oidc/userinfo
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+      # Everyone who may log in through Pocket ID can view and edit dashboards
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "'Editor'"
+      GF_AUTH_OAUTH_AUTO_LOGIN: "true"
+    labels:
+      - "docker-volume-backup.stop-during-backup=garmin-grafana"
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_backbone"
+      - "traefik.http.routers.garmin-grafana.rule=Host(`garmin.home.aquiver.de`)"
+      - "traefik.http.routers.garmin-grafana.service=garmin-grafana-service@docker"
+      - "traefik.http.services.garmin-grafana-service.loadbalancer.server.port=3000"
+      - "homepage.group=Apps"
+      - "homepage.name=Garmin Stats"
+      - "homepage.icon=grafana"
+      - "homepage.href=https://garmin.home.aquiver.de/"
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+    networks:
+      - no-internet
+      # Plugin download, token exchange with Pocket ID
+      - internet
+      - traefik_backbone
+    cap_drop:
+      - "ALL"
+    restart: unless-stopped
+    security_opt:
+      - "no-new-privileges:true"
+
+networks:
+  no-internet:
+    driver: bridge
+    internal: true
+  internet:
+    driver: bridge
+  traefik_backbone:
+    name: traefik_backbone
+    external: true
